@@ -44,8 +44,8 @@
 //                    | CMD |     | SPC |   | ENT |     | ALT |
             bindings = <
 &kp TILDE  &kp N1       &kp N2       &kp N3       &kp N4       &kp N5         &kp N6   &kp N7    &kp N8    &kp N9    &kp N0 &kp DEL
-&trans     &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2 &bt BT_SEL 3 &bt BT_SEL 4   &kp LEFT &kp DOWN  &kp UP    &kp RIGHT &trans &trans
-&trans     &trans       &trans       &trans       &trans       &trans         &kp HOME &kp PG_DN &kp PG_UP &kp END   &trans &trans
+&trans     &bt BT_SEL 0 &bt BT_SEL 1 &bt BT_SEL 2 &bt BT_SEL 3 &bt BT_SEL 4   &trans   &kp LEFT  &kp UP    &kp RIGHT &trans &trans
+&trans     &trans       &trans       &trans       &trans       &trans         &kp HOME &kp PG_DN &kp DOWN  &kp PG_UP &kp END &trans
                                      &kp LCMD     &trans       &kp SPACE      &kp RET  &trans    &kp RALT
             >;
         };
@@ -54,12 +54,12 @@
             display-name = "SYMBOL";
 // -----------------------------------------------------------------------------------------
 // |      |  !  |  @  |  #  |  $  |  %  |   |  ^  |  &  |  *  |  (  |  )  | BSPC |
-// | CTRL |     |     |     |     |     |   |  -  |  =  |  [  |  ]  |  \  |  `   |
+// | CTRL |⌘⇧[ |⌘⇧] |     |     |     |   |  -  | LEFT| DOWN|  UP | RGT |  `   |
 // | SHFT |     |     |     |     |     |   |  _  |  +  |  {  |  }  | "|" |  ~   |
 //                    | CMD |     | SPC |   | ENT |     | ALT |
             bindings = <
 &trans    &kp EXCL &kp AT &kp HASH &kp DLLR &kp PRCNT   &kp CARET &kp AMPS  &kp ASTRK &kp LPAR &kp RPAR &kp BSPC
-&kp LCTRL &trans   &trans &trans   &trans   &trans      &kp MINUS &kp EQUAL &kp LBKT  &kp RBKT &kp BSLH &kp GRAVE
+&kp LCTRL &kp LG(LS(LBKT)) &kp LG(LS(RBKT)) &trans &trans &trans   &kp MINUS &kp EQUAL &kp LBKT  &kp RBKT &kp BSLH &kp GRAVE
 &kp LSHFT &trans   &trans &trans   &trans   &trans      &kp UNDER &kp PLUS  &kp LBRC  &kp RBRC &kp PIPE &kp TILDE
                           &kp LCMD &trans   &kp SPACE   &kp RET   &trans    &kp RALT
             >;
