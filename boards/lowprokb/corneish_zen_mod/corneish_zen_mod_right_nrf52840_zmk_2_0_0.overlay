@@ -45,6 +45,12 @@
     };
 };
 
+// Enable HV regulator so VDDHDIV5 measures battery voltage.
+// Matches nice_nano_v2 overlay.
+&reg0 {
+    status = "okay";
+};
+
 &default_transform {
     col-offset = <6>;
 };

@@ -46,6 +46,14 @@
 
 };
 
+// Enable the high voltage regulator so VDDH is the input rail and
+// SAADC VDDHDIV5 measures actual battery voltage. Without this the
+// chip stays in normal voltage mode and VDDHDIV5 returns garbage.
+// Matches nice_nano_v2 overlay.
+&reg0 {
+    status = "okay";
+};
+
 &pinctrl {
     spi0_default: spi0_default {
         group1 {
