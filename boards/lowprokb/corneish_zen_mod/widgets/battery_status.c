@@ -103,26 +103,30 @@ static void set_battery_symbol(lv_obj_t *icon, lv_obj_t *label,
     }
 
     if (label != NULL) {
-        // TEMP: show "pct/mv" so we can see both the computed percentage
-        // from read_battery_level_direct() and the raw mV reading.
+        // TEMP: query both SOC and VOLTAGE channels to see what the driver
+        // actually has stored. SENSOR_CHAN_ALL fetch populates both.
+        // Shows "soc:A.B" where A is raw val1 and B is raw val2 in mV units.
         char buf[20];
 #if DT_HAS_CHOSEN(zmk_battery)
         const struct device *batt = DEVICE_DT_GET(DT_CHOSEN(zmk_battery));
         if (!device_is_ready(batt)) {
             snprintf(buf, sizeof(buf), "NODEV");
         } else {
-            int rc = sensor_sample_fetch_chan(batt, SENSOR_CHAN_GAUGE_VOLTAGE);
+            // Fetch all channels at once
+            int rc = sensor_sample_fetch(batt);
             if (rc != 0) {
                 snprintf(buf, sizeof(buf), "F%d", rc);
             } else {
-                struct sensor_value v;
-                rc = sensor_channel_get(batt, SENSOR_CHAN_GAUGE_VOLTAGE, &v);
-                if (rc != 0) {
-                    snprintf(buf, sizeof(buf), "G%d", rc);
+                struct sensor_value soc, vlt;
+                int rc1 = sensor_channel_get(batt, SENSOR_CHAN_GAUGE_STATE_OF_CHARGE, &soc);
+                int rc2 = sensor_channel_get(batt, SENSOR_CHAN_GAUGE_VOLTAGE, &vlt);
+                if (rc1 != 0 || rc2 != 0) {
+                    snprintf(buf, sizeof(buf), "G%d,%d", rc1, rc2);
                 } else {
-                    int mv = v.val1 * 1000 + (v.val2 / 1000);
-                    uint8_t pct = local_lithium_mv_to_pct(mv);
-                    snprintf(buf, sizeof(buf), "%d/%d", pct, mv);
+                    // soc.val1 = percentage directly
+                    // vlt.val1 = volts, vlt.val2 = microvolts remainder
+                    int mv = vlt.val1 * 1000 + (vlt.val2 / 1000);
+                    snprintf(buf, sizeof(buf), "%d:%d", (int)soc.val1, mv);
                 }
             }
         }
