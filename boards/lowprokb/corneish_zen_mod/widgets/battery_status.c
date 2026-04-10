@@ -64,9 +64,11 @@ static void set_battery_symbol(lv_obj_t *icon, lv_obj_t *label,
         lv_image_set_src(icon, usb ? &batt_0_chg : &batt_0);
     }
 
-    char buf[6];
-    snprintf(buf, sizeof(buf), "%d%%", level);
-    lv_label_set_text(label, buf);
+    if (label != NULL) {
+        char buf[6];
+        snprintf(buf, sizeof(buf), "%d%%", level);
+        lv_label_set_text(label, buf);
+    }
 }
 
 void battery_status_update_cb(struct battery_status_state state) {
@@ -100,10 +102,16 @@ int zmk_widget_battery_status_init(struct zmk_widget_battery_status *widget, lv_
     widget->obj = lv_image_create(parent);
 
     // label is a sibling — positioned by the status screen. Uses the small
-    // 16pt font since the display is only 80px wide.
+    // 16pt font since the display is only 80px wide. If LVGL runs out of
+    // memory creating it, leave widget->label NULL and guard updates below
+    // so we crash-loop-free (just no percentage shown).
     widget->label = lv_label_create(parent);
-    lv_obj_set_style_text_font(widget->label, &lv_font_montserrat_16, LV_PART_MAIN);
-    lv_label_set_text(widget->label, "");
+    if (widget->label != NULL) {
+        lv_obj_set_style_text_font(widget->label, &lv_font_montserrat_16, LV_PART_MAIN);
+        lv_label_set_text(widget->label, "");
+    } else {
+        LOG_WRN("battery_status: could not allocate percentage label (OOM)");
+    }
 
     sys_slist_append(&widgets, &widget->node);
     widget_battery_status_init();

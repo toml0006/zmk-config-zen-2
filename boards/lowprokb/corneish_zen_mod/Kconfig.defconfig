@@ -61,8 +61,11 @@ config ZMK_DISPLAY_BLANK_ON_IDLE
 config HEAP_MEM_POOL_SIZE
     default 1024
 
+# Bumped from the upstream 4096 default so the custom battery widget's
+# extra percentage lv_label has comfortable headroom over the baseline
+# widgets + LVGL VDB on a 1-bit IL0323. Previous crashes were OOM-related.
  config LV_Z_MEM_POOL_SIZE
-     default 4096
+     default 8192
 
 endif # ZMK_DISPLAY
 

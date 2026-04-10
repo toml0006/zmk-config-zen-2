@@ -42,7 +42,10 @@ lv_obj_t *zmk_display_status_screen() {
     zmk_widget_battery_status_init(&battery_status_widget, screen);
     // Icon shifted left of center, percentage label to the right of it.
     lv_obj_align(zmk_widget_battery_status_obj(&battery_status_widget), LV_ALIGN_TOP_MID, -18, 2);
-    lv_obj_align(zmk_widget_battery_status_label(&battery_status_widget), LV_ALIGN_TOP_MID, 20, 4);
+    lv_obj_t *batt_label = zmk_widget_battery_status_label(&battery_status_widget);
+    if (batt_label != NULL) {
+        lv_obj_align(batt_label, LV_ALIGN_TOP_MID, 20, 4);
+    }
 #endif
 
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_OUTPUT_STATUS)
