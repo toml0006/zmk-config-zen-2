@@ -43,18 +43,12 @@ LV_IMG_DECLARE(batt_5_chg);
 LV_IMG_DECLARE(batt_0);
 LV_IMG_DECLARE(batt_0_chg);
 
-// Local approximation that matches ZMK's lithium_ion_mv_to_pct() in
-// battery_common.c — we inline it because we call the sensor directly
-// instead of going through the (broken) zmk_battery_update() loop.
-static uint8_t local_lithium_mv_to_pct(int bat_mv) {
-    if (bat_mv >= 4200) return 100;
-    if (bat_mv <= 3450) return 0;
-    return (uint8_t)(bat_mv * 2 / 15 - 459);
-}
-
 // Read the chosen battery sensor's state-of-charge channel directly.
 // Works with fuel gauge chips like bq274xx that report SOC natively.
-// Returns -1 if unavailable.
+// Returns -1 if unavailable. We do this ourselves instead of relying
+// on zmk_battery_state_of_charge() because the bq274xx device may not
+// be ready at SYS_INIT APPLICATION priority, in which case ZMK's
+// battery poll loop bails out and never recovers on this board.
 static int read_battery_level_direct(void) {
 #if DT_HAS_CHOSEN(zmk_battery)
     const struct device *batt = DEVICE_DT_GET(DT_CHOSEN(zmk_battery));
@@ -76,9 +70,9 @@ static int read_battery_level_direct(void) {
 
 static void set_battery_symbol(lv_obj_t *icon, lv_obj_t *label,
                                struct battery_status_state state) {
-    // Ignore ZMK's broken last_state_of_charge — compute directly from
-    // the sensor. If the sensor is unavailable, fall back to whatever
-    // ZMK gave us (probably 0).
+    // Prefer a fresh direct read from the fuel gauge. Fall back to the
+    // level from the last zmk_battery_state_changed event if the direct
+    // read fails for any reason.
     int direct = read_battery_level_direct();
     uint8_t level = (direct >= 0) ? (uint8_t)direct : state.level;
 
@@ -135,9 +129,10 @@ ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
 
-// Periodic refresh callback — re-reads the sensor directly, since
-// ZMK's zmk_battery_update() poll loop does not reliably run on this
-// board under ZMK main (Zephyr 4.1).
+// Periodic refresh callback — re-reads the fuel gauge directly so the
+// displayed value stays current even if ZMK's zmk_battery_update()
+// poll loop never ran (e.g. if the bq274xx was not ready at
+// SYS_INIT APPLICATION priority).
 static void battery_refresh_timer_cb(lv_timer_t *t) {
     struct zmk_widget_battery_status *widget;
     SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
