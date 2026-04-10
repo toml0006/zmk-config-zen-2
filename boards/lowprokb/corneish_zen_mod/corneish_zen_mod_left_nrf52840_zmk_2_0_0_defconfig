@@ -65,11 +65,10 @@ CONFIG_CUSTOM_WIDGET_OUTPUT_TEXT=y
 CONFIG_CUSTOM_WIDGET_LAYER_STATUS=y
 CONFIG_ZMK_WIDGET_LAYER_STATUS=n
 CONFIG_CUSTOM_WIDGET_WPM_STATUS=y
-# Re-enabled with deduplication: the update callback now caches the
-# last mods value and only calls lv_label_set_text when it actually
-# changes. Non-modifier keypresses leave the state untouched so the
-# widget doesn't trigger a refresh on every character.
-CONFIG_CUSTOM_WIDGET_MOD_STATUS=y
+# Mod indicator disabled — e-paper refresh lag made it worse than
+# useless: by the time the display caught up with the key press,
+# the key was already released. Space reclaimed by the other rows.
+CONFIG_CUSTOM_WIDGET_MOD_STATUS=n
 
 # WPM tracking for the custom WPM widget
 CONFIG_ZMK_WPM=y

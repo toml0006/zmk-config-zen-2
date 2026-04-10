@@ -83,18 +83,15 @@ lv_obj_t *zmk_display_status_screen() {
     lv_obj_t *screen;
     screen = lv_obj_create(NULL);
 
-    // Row y-anchors — 128 px display.
+    // Row y-anchors — 128 px display, 4-row layout with mod removed.
     //
-    //   y=  2    row 1: battery (M26) + connection (M16)   ≈ 26 tall
-    //   y= 34    row 2: device name                         16 tall
-    //   y= 54    row 3: WPM                                 16 tall
-    //   y= 78    row 4: modifier label(s)                   26 tall
-    //   y=108    row 5: layer name                          16 tall
+    //   y=  4    row 1: battery (M26) + connection (M16)   ≈ 26 tall
+    //   y= 44    row 2: device name                         16 tall
+    //   y= 68    row 3: WPM                                 16 tall
+    //   y=108    row 4: layer name                          16 tall  (bottom-aligned)
     //
-    // Modifier row is centered vertically between the bottom of row 3
-    // (y=70) and the top of row 5 (y=104): midpoint y=87, offset by
-    // the 26pt font height (~28) / 2 = 14 → top of label at y=73.
-    // With a small nudge down for visual balance, place at y=78.
+    // Gaps: row1→row2 ≈ 14, row2→row3 ≈ 8, row3→row4 ≈ 24 (includes
+    // natural space above the bottom-aligned layer).
 
     // ---- Row 1: battery (26pt, wider/taller) + connection (16pt) ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_BATTERY_TEXT)
@@ -117,32 +114,16 @@ lv_obj_t *zmk_display_status_screen() {
     // ---- Row 2 (left): device name ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_DEVICE_NAME)
     zmk_widget_device_name_init(&device_name_widget, screen);
-    lv_obj_align(zmk_widget_device_name_obj(&device_name_widget), LV_ALIGN_TOP_MID, 0, 34);
+    lv_obj_align(zmk_widget_device_name_obj(&device_name_widget), LV_ALIGN_TOP_MID, 0, 44);
 #endif
 
     // ---- Row 3 (left): WPM ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_WPM_STATUS)
     zmk_widget_wpm_status_init(&wpm_status_widget, screen);
-    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 54);
+    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 68);
 #endif
 
-    // ---- Row 4 (left): modifier indicators (4 separate labels) ----
-    // Row is centered vertically between the bottom of the WPM row
-    // (~70) and the top of the layer row (~104). Each label is ~18 px
-    // wide in mac_mods_26 font. Four labels side-by-side with 2 px gap:
-    // 4*18 + 3*2 = 78 px → 1 px side margin.
-#if IS_ENABLED(CONFIG_CUSTOM_WIDGET_MOD_STATUS)
-    zmk_widget_mod_status_init(&mod_status_widget, screen);
-    const int32_t mod_y = 78;
-    const int32_t mod_step = 20;
-    const int32_t mod_x0 = 1;   // (80 - 4*18 - 3*2) / 2 ≈ 1
-    lv_obj_align(mod_status_widget.ctrl_label,  LV_ALIGN_TOP_LEFT, mod_x0 + 0 * mod_step, mod_y);
-    lv_obj_align(mod_status_widget.shift_label, LV_ALIGN_TOP_LEFT, mod_x0 + 1 * mod_step, mod_y);
-    lv_obj_align(mod_status_widget.opt_label,   LV_ALIGN_TOP_LEFT, mod_x0 + 2 * mod_step, mod_y);
-    lv_obj_align(mod_status_widget.cmd_label,   LV_ALIGN_TOP_LEFT, mod_x0 + 3 * mod_step, mod_y);
-#endif
-
-    // ---- Row 5 (left): layer name ----
+    // ---- Row 4 (left): layer name ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_LAYER_STATUS)
     zmk_widget_layer_status_init(&layer_status_widget, screen);
     lv_obj_set_style_text_font(zmk_widget_layer_status_obj(&layer_status_widget),
