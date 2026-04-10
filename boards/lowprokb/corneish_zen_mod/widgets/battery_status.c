@@ -72,7 +72,7 @@ static void set_battery_symbol(lv_obj_t *icon, lv_obj_t *label,
 void battery_status_update_cb(struct battery_status_state state) {
     struct zmk_widget_battery_status *widget;
     SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
-        set_battery_symbol(widget->icon, widget->label, state);
+        set_battery_symbol(widget->obj, widget->label, state);
     }
 }
 
@@ -96,21 +96,14 @@ ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
 
 int zmk_widget_battery_status_init(struct zmk_widget_battery_status *widget, lv_obj_t *parent) {
-    // Container holds the battery icon + a percentage label side-by-side.
-    widget->obj = lv_obj_create(parent);
-    lv_obj_set_size(widget->obj, 70, 24);
-    lv_obj_set_style_pad_all(widget->obj, 0, LV_PART_MAIN);
-    lv_obj_set_style_border_width(widget->obj, 0, LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(widget->obj, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_clear_flag(widget->obj, LV_OBJ_FLAG_SCROLLABLE);
+    // obj is the battery level icon (unchanged from stock).
+    widget->obj = lv_image_create(parent);
 
-    widget->icon = lv_image_create(widget->obj);
-    lv_obj_align(widget->icon, LV_ALIGN_LEFT_MID, 0, 0);
-
-    widget->label = lv_label_create(widget->obj);
+    // label is a sibling — positioned by the status screen. Uses the small
+    // 16pt font since the display is only 80px wide.
+    widget->label = lv_label_create(parent);
     lv_obj_set_style_text_font(widget->label, &lv_font_montserrat_16, LV_PART_MAIN);
-    lv_obj_align(widget->label, LV_ALIGN_RIGHT_MID, 0, 0);
-    lv_label_set_text(widget->label, "--%");
+    lv_label_set_text(widget->label, "");
 
     sys_slist_append(&widgets, &widget->node);
     widget_battery_status_init();
@@ -120,4 +113,8 @@ int zmk_widget_battery_status_init(struct zmk_widget_battery_status *widget, lv_
 
 lv_obj_t *zmk_widget_battery_status_obj(struct zmk_widget_battery_status *widget) {
     return widget->obj;
+}
+
+lv_obj_t *zmk_widget_battery_status_label(struct zmk_widget_battery_status *widget) {
+    return widget->label;
 }
