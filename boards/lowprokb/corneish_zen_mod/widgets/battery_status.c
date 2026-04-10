@@ -168,9 +168,10 @@ int zmk_widget_battery_status_init(struct zmk_widget_battery_status *widget, lv_
     // Force one immediate read so we don't wait for the first event.
     battery_refresh_timer_cb(NULL);
 
-    // Refresh every 30 seconds. We can't rely on ZMK's battery poll,
-    // so we own the refresh cadence ourselves.
-    lv_timer_create(battery_refresh_timer_cb, 30000, NULL);
+    // Refresh every 5 minutes. E-paper doesn't like frequent partial
+    // updates and the BQ274xx fuel gauge changes slowly enough that
+    // 5 minutes is plenty for a rough level indicator.
+    lv_timer_create(battery_refresh_timer_cb, 300000, NULL);
 
     return 0;
 }

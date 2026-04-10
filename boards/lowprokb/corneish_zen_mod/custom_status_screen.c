@@ -71,38 +71,46 @@ lv_obj_t *zmk_display_status_screen() {
     screen = lv_obj_create(NULL);
 
     // ---- Row 1: battery icon (left) + connection icon (right) ----
+    // Icons are shrunk to ~60% of their native 40-54px size so two fit
+    // in the 80px-wide display with breathing room.
+    const int32_t ICON_SCALE = 160;  // 256 = 1x, 128 = 0.5x, 160 ≈ 0.63x
+
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_BATTERY_STATUS)
     zmk_widget_battery_status_init(&battery_status_widget, screen);
     lv_obj_t *batt_icon = zmk_widget_battery_status_obj(&battery_status_widget);
-    lv_obj_align(batt_icon, LV_ALIGN_TOP_LEFT, 8, 4);
+    lv_image_set_scale(batt_icon, ICON_SCALE);
+    lv_obj_align(batt_icon, LV_ALIGN_TOP_LEFT, 4, 2);
 
+    // Hide the percentage label — user wants just the icon, no text.
     lv_obj_t *batt_label = zmk_widget_battery_status_label(&battery_status_widget);
     if (batt_label != NULL) {
-        // Percentage text centered under the battery icon
-        lv_obj_align(batt_label, LV_ALIGN_TOP_LEFT, 2, 28);
+        lv_obj_add_flag(batt_label, LV_OBJ_FLAG_HIDDEN);
     }
 #endif
 
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_OUTPUT_STATUS)
     zmk_widget_output_status_init(&output_status_widget, screen);
-    lv_obj_align(zmk_widget_output_status_obj(&output_status_widget), LV_ALIGN_TOP_RIGHT, -8, 4);
+    lv_obj_t *out_icon = zmk_widget_output_status_obj(&output_status_widget);
+    lv_image_set_scale(out_icon, ICON_SCALE);
+    lv_obj_align(out_icon, LV_ALIGN_TOP_RIGHT, -4, 2);
 #endif
 
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_PERIPHERAL_STATUS)
     zmk_widget_peripheral_status_init(&peripheral_status_widget, screen);
-    lv_obj_align(zmk_widget_peripheral_status_obj(&peripheral_status_widget), LV_ALIGN_TOP_RIGHT,
-                 -8, 4);
+    lv_obj_t *per_icon = zmk_widget_peripheral_status_obj(&peripheral_status_widget);
+    lv_image_set_scale(per_icon, ICON_SCALE);
+    lv_obj_align(per_icon, LV_ALIGN_TOP_RIGHT, -4, 2);
 #endif
 
-    // ---- Row 2 (left half): modifiers stacked above WPM ----
+    // ---- Row 2 (left half): WPM ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_MOD_STATUS)
     zmk_widget_mod_status_init(&mod_status_widget, screen);
-    lv_obj_align(zmk_widget_mod_status_obj(&mod_status_widget), LV_ALIGN_TOP_MID, 0, 48);
+    lv_obj_align(zmk_widget_mod_status_obj(&mod_status_widget), LV_ALIGN_TOP_MID, 0, 36);
 #endif
 
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_WPM_STATUS)
     zmk_widget_wpm_status_init(&wpm_status_widget, screen);
-    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 66);
+    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 40);
 #endif
 
     // ---- Row 3: layer widget (left) or invader pixel art (right) ----

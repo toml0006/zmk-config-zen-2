@@ -21,6 +21,13 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
+// Throttle display updates to at most once per minute. ZMK fires
+// wpm_state_changed on every keypress, which causes a full e-paper
+// refresh and is both ugly and wasteful. We accept the event but only
+// actually rewrite the label at most every REFRESH_INTERVAL ms.
+#define REFRESH_INTERVAL_MS 60000
+static int64_t last_refresh_uptime = 0;
+
 struct wpm_status_state {
     uint8_t wpm;
 };
@@ -36,6 +43,12 @@ static void set_wpm_text(lv_obj_t *label, struct wpm_status_state state) {
 }
 
 static void wpm_status_update_cb(struct wpm_status_state state) {
+    int64_t now = k_uptime_get();
+    if (last_refresh_uptime != 0 && (now - last_refresh_uptime) < REFRESH_INTERVAL_MS) {
+        return;  // throttled — skip this update
+    }
+    last_refresh_uptime = now;
+
     struct zmk_widget_wpm_status *widget;
     SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_wpm_text(widget->obj, state); }
 }

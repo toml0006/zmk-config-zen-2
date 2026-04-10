@@ -58,7 +58,10 @@ CONFIG_ZMK_WIDGET_OUTPUT_STATUS=n
 CONFIG_CUSTOM_WIDGET_LAYER_STATUS=y
 CONFIG_ZMK_WIDGET_LAYER_STATUS=n
 CONFIG_CUSTOM_WIDGET_WPM_STATUS=y
-CONFIG_CUSTOM_WIDGET_MOD_STATUS=y
+# Mod indicator disabled: updates on every keycode event which
+# caused way too many e-paper partial refreshes. Keep the code
+# compiled-out for now; re-enable if we add debouncing.
+CONFIG_CUSTOM_WIDGET_MOD_STATUS=n
 
 # WPM tracking for the custom WPM widget
 CONFIG_ZMK_WPM=y
