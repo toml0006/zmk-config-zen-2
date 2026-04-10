@@ -68,14 +68,15 @@
         };
     };
 
-    i2c0_default: i2c0_default {
+    // I2C1 not I2C0 — SPI0 is used by the e-paper display.
+    i2c1_default: i2c1_default {
         group1 {
             psels = <NRF_PSEL(TWIM_SDA, 0, 16)>,
                 <NRF_PSEL(TWIM_SCL, 0, 13)>;
         };
     };
 
-    i2c0_sleep: i2c0_sleep {
+    i2c1_sleep: i2c1_sleep {
         group1 {
             psels = <NRF_PSEL(TWIM_SDA, 0, 16)>,
                 <NRF_PSEL(TWIM_SCL, 0, 13)>;
@@ -107,12 +108,13 @@
     };
 };
 
-// BQ274xx fuel gauge on the right half (different I2C pins than left)
-&i2c0 {
+// BQ274xx fuel gauge on the right half (different I2C pins than left).
+// Using I2C1 because SPI0 is already in use for the e-paper display.
+&i2c1 {
     status = "okay";
     compatible = "nordic,nrf-twim";
-    pinctrl-0 = <&i2c0_default>;
-    pinctrl-1 = <&i2c0_sleep>;
+    pinctrl-0 = <&i2c1_default>;
+    pinctrl-1 = <&i2c1_sleep>;
     pinctrl-names = "default", "sleep";
     clock-frequency = <100000>;
 

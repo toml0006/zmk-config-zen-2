@@ -51,14 +51,16 @@
         };
     };
 
-    i2c0_default: i2c0_default {
+    // I2C1 not I2C0 — the Zen V2 uses SPI0 for the e-paper display
+    // which conflicts with I2C0 on nRF52840 (shared hardware block).
+    i2c1_default: i2c1_default {
         group1 {
             psels = <NRF_PSEL(TWIM_SDA, 0, 6)>,
                 <NRF_PSEL(TWIM_SCL, 0, 26)>;
         };
     };
 
-    i2c0_sleep: i2c0_sleep {
+    i2c1_sleep: i2c1_sleep {
         group1 {
             psels = <NRF_PSEL(TWIM_SDA, 0, 6)>,
                 <NRF_PSEL(TWIM_SCL, 0, 26)>;
@@ -100,13 +102,13 @@
 };
 
 // BQ27441 / BQ274xx fuel gauge chip — carried over from the V1 Zen
-// overlay which used this same chip. The V2 hardware is unclear so
-// we're trying this approach after nrf-vddh returned garbage.
-&i2c0 {
+// overlay which used this same chip. Using I2C1 because SPI0 is
+// already in use for the e-paper display (shared hardware with I2C0).
+&i2c1 {
     status = "okay";
     compatible = "nordic,nrf-twim";
-    pinctrl-0 = <&i2c0_default>;
-    pinctrl-1 = <&i2c0_sleep>;
+    pinctrl-0 = <&i2c1_default>;
+    pinctrl-1 = <&i2c1_sleep>;
     pinctrl-names = "default", "sleep";
     clock-frequency = <100000>;
 
