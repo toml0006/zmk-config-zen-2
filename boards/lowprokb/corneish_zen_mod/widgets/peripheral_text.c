@@ -29,7 +29,7 @@ static struct peripheral_text_state get_state(const zmk_event_t *_eh) {
 }
 
 static void set_text(lv_obj_t *label, struct peripheral_text_state state) {
-    lv_label_set_text(label, state.connected ? "OK" : "XX");
+    lv_label_set_text(label, state.connected ? LV_SYMBOL_OK : LV_SYMBOL_CLOSE);
 }
 
 static void peripheral_text_update_cb(struct peripheral_text_state state) {

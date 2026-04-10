@@ -2,11 +2,15 @@
  * Copyright (c) 2026 The ZMK Contributors
  * SPDX-License-Identifier: MIT
  *
- * Text-based output status widget. Shows the current BT profile or USB
- * connection as a short label ("USB", "BT1"..."BT5", or "---" for
- * disconnected) instead of a large icon. Works around the fact that
- * the stock output_status icons are 40x31 and can't be scaled (LVGL
- * does not support transforms on indexed 1-bit images).
+ * Text-based output status widget. Uses LV_SYMBOL glyphs from the
+ * Montserrat font (no separate image assets):
+ *
+ *   USB connected              →  LV_SYMBOL_USB
+ *   BT profile N connected     →  LV_SYMBOL_BLUETOOTH + "N"
+ *   BT profile N advertising   →  LV_SYMBOL_BLUETOOTH + "N" + "?"
+ *   BT profile N bonded-but-   →  LV_SYMBOL_BLUETOOTH + "N" + "-"
+ *     disconnected
+ *   other                      →  "---"
  */
 
 #include <stdio.h>
@@ -41,19 +45,19 @@ static struct output_text_state get_state(const zmk_event_t *_eh) {
 }
 
 static void set_output_text(lv_obj_t *label, struct output_text_state state) {
-    char buf[8];
+    char buf[16];
     switch (state.selected_endpoint.transport) {
     case ZMK_TRANSPORT_USB:
-        snprintf(buf, sizeof(buf), "USB");
+        snprintf(buf, sizeof(buf), LV_SYMBOL_USB);
         break;
     case ZMK_TRANSPORT_BLE: {
         int idx = state.selected_endpoint.ble.profile_index + 1;
         if (!state.active_profile_bonded) {
-            snprintf(buf, sizeof(buf), "BT%d?", idx);
+            snprintf(buf, sizeof(buf), LV_SYMBOL_BLUETOOTH "%d?", idx);
         } else if (!state.active_profile_connected) {
-            snprintf(buf, sizeof(buf), "BT%d-", idx);
+            snprintf(buf, sizeof(buf), LV_SYMBOL_BLUETOOTH "%d-", idx);
         } else {
-            snprintf(buf, sizeof(buf), "BT%d", idx);
+            snprintf(buf, sizeof(buf), LV_SYMBOL_BLUETOOTH "%d", idx);
         }
         break;
     }

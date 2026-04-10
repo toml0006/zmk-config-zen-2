@@ -94,4 +94,10 @@ menuconfig CUSTOM_WIDGET_OUTPUT_TEXT
 menuconfig CUSTOM_WIDGET_PERIPHERAL_TEXT
     bool "text-based peripheral connection (OK/XX label)"
 
+menuconfig CUSTOM_WIDGET_BATTERY_TEXT
+    bool "text-based battery widget (LV_SYMBOL_BATTERY_*)"
+
+menuconfig CUSTOM_WIDGET_DEVICE_NAME
+    bool "device name label (current BT profile name)"
+
 endif # BOARD_CORNEISH_ZEN_MOD_LEFT || BOARD_CORNEISH_ZEN_MOD_RIGHT

@@ -7,6 +7,8 @@ if(CONFIG_ZMK_DISPLAY)
   target_sources_ifdef(CONFIG_CUSTOM_WIDGET_MOD_STATUS app PRIVATE widgets/mod_status.c)
   target_sources_ifdef(CONFIG_CUSTOM_WIDGET_OUTPUT_TEXT app PRIVATE widgets/output_text.c)
   target_sources_ifdef(CONFIG_CUSTOM_WIDGET_PERIPHERAL_TEXT app PRIVATE widgets/peripheral_text.c)
+  target_sources_ifdef(CONFIG_CUSTOM_WIDGET_BATTERY_TEXT app PRIVATE widgets/battery_text.c)
+  target_sources_ifdef(CONFIG_CUSTOM_WIDGET_DEVICE_NAME app PRIVATE widgets/device_name.c)
 
   add_subdirectory_ifdef(CONFIG_ZMK_DISPLAY_STATUS_SCREEN_CUSTOM widgets/icons)
 endif()
