@@ -88,4 +88,10 @@ menuconfig CUSTOM_WIDGET_WPM_STATUS
 menuconfig CUSTOM_WIDGET_MOD_STATUS
     bool "custom modifier status widget"
 
+menuconfig CUSTOM_WIDGET_OUTPUT_TEXT
+    bool "text-based output status (BT/USB label)"
+
+menuconfig CUSTOM_WIDGET_PERIPHERAL_TEXT
+    bool "text-based peripheral connection (OK/XX label)"
+
 endif # BOARD_CORNEISH_ZEN_MOD_LEFT || BOARD_CORNEISH_ZEN_MOD_RIGHT

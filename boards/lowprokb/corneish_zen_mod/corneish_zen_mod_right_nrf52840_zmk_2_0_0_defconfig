@@ -53,8 +53,10 @@ CONFIG_ZMK_DISPLAY_STATUS_SCREEN_CUSTOM=y
 CONFIG_ZMK_DISPLAY_STATUS_SCREEN_BUILT_IN=n
 CONFIG_CUSTOM_WIDGET_BATTERY_STATUS=y
 CONFIG_ZMK_WIDGET_BATTERY_STATUS=n
-CONFIG_CUSTOM_WIDGET_PERIPHERAL_STATUS=y
+# Replaced with text-based peripheral widget
+CONFIG_CUSTOM_WIDGET_PERIPHERAL_STATUS=n
 CONFIG_ZMK_WIDGET_PERIPHERAL_STATUS=n
+CONFIG_CUSTOM_WIDGET_PERIPHERAL_TEXT=y
 # WPM cannot run on the peripheral — wpm.c references
 # as_zmk_keycode_state_changed which only exists on the central.
 # WPM widget + CONFIG_ZMK_WPM only enabled on the left half.
