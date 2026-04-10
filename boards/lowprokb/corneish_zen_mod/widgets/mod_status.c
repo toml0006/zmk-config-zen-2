@@ -38,7 +38,6 @@ static struct mod_status_state get_state(const zmk_event_t *eh) {
 }
 
 static void set_mod_text(lv_obj_t *label, struct mod_status_state state) {
-    // Each slot is 2 chars ("C ", "S ", etc.) so length is known.
     // Bits per HID spec:
     //   0x01 = LCTL   0x10 = RCTL
     //   0x02 = LSFT   0x20 = RSFT
@@ -50,12 +49,20 @@ static void set_mod_text(lv_obj_t *label, struct mod_status_state state) {
     bool alt   = (m & 0x04) || (m & 0x40);
     bool gui   = (m & 0x08) || (m & 0x80);
 
-    char text[10];
-    snprintf(text, sizeof(text), "%c %c %c %c",
-             ctrl  ? 'C' : ' ',
-             shift ? 'S' : ' ',
-             alt   ? 'A' : ' ',
-             gui   ? 'G' : ' ');
+    // Try actual Mac-style Unicode glyphs. These are UTF-8 encoded literals:
+    //   ⌃ U+2303 UP ARROWHEAD       (Ctrl)
+    //   ⇧ U+21E7 UPWARDS WHITE ARROW (Shift)
+    //   ⌥ U+2325 OPTION KEY          (Opt)
+    //   ⌘ U+2318 PLACE OF INTEREST   (Cmd)
+    // If LVGL's Montserrat font doesn't include these code points, they'll
+    // render as blank boxes — in which case we fall back to ASCII letters
+    // via a follow-up change.
+    char text[32];
+    snprintf(text, sizeof(text), "%s%s%s%s",
+             ctrl  ? "⌃" : "",
+             shift ? "⇧" : "",
+             alt   ? "⌥" : "",
+             gui   ? "⌘" : "");
     lv_label_set_text(label, text);
 }
 
@@ -83,8 +90,10 @@ ZMK_SUBSCRIPTION(widget_mod_status, zmk_keycode_state_changed);
 int zmk_widget_mod_status_init(struct zmk_widget_mod_status *widget, lv_obj_t *parent) {
     widget->obj = lv_label_create(parent);
     if (widget->obj != NULL) {
-        lv_obj_set_style_text_font(widget->obj, &lv_font_montserrat_16, LV_PART_MAIN);
-        lv_label_set_text(widget->obj, "       ");
+        // Use the larger 26pt font per user request for a prominent
+        // modifier indicator centered above the layer name.
+        lv_obj_set_style_text_font(widget->obj, &lv_font_montserrat_26, LV_PART_MAIN);
+        lv_label_set_text(widget->obj, "");
     }
 
     sys_slist_append(&widgets, &widget->node);

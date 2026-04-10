@@ -83,6 +83,17 @@ lv_obj_t *zmk_display_status_screen() {
     lv_obj_t *screen;
     screen = lv_obj_create(NULL);
 
+    // Row y-anchors — designed for equal visual spacing on the 128px
+    // tall display. Row heights in Montserrat 16 are ~16 px, Montserrat
+    // 26 is ~26 px (used for the modifier row). Gaps between rows are
+    // all ~8 px, plus a 6 px top/bottom margin.
+    //
+    //   y=  4    row 1: battery + connection     (16 tall)
+    //   y= 28    row 2: device name              (16 tall)
+    //   y= 52    row 3: WPM                      (16 tall)
+    //   y= 76    row 4: modifiers                (26 tall, Montserrat 26)
+    //   y=108    row 5: layer name               (16 tall)
+
     // ---- Row 1: battery symbol (left) + connection symbol (right) ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_BATTERY_TEXT)
     zmk_widget_battery_text_init(&battery_text_widget, screen);
@@ -103,27 +114,27 @@ lv_obj_t *zmk_display_status_screen() {
     // ---- Row 2 (left): device name ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_DEVICE_NAME)
     zmk_widget_device_name_init(&device_name_widget, screen);
-    lv_obj_align(zmk_widget_device_name_obj(&device_name_widget), LV_ALIGN_TOP_MID, 0, 26);
+    lv_obj_align(zmk_widget_device_name_obj(&device_name_widget), LV_ALIGN_TOP_MID, 0, 28);
 #endif
 
     // ---- Row 3 (left): WPM ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_WPM_STATUS)
     zmk_widget_wpm_status_init(&wpm_status_widget, screen);
-    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 44);
+    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 52);
 #endif
 
-    // ---- Row 4 (left): modifier indicators ----
+    // ---- Row 4 (left): modifier indicators (large, centered) ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_MOD_STATUS)
     zmk_widget_mod_status_init(&mod_status_widget, screen);
-    lv_obj_align(zmk_widget_mod_status_obj(&mod_status_widget), LV_ALIGN_TOP_MID, 0, 62);
+    lv_obj_align(zmk_widget_mod_status_obj(&mod_status_widget), LV_ALIGN_TOP_MID, 0, 76);
 #endif
 
-    // ---- Row 5 (left): layer name (no heading image to save space) ----
+    // ---- Row 5 (left): layer name ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_LAYER_STATUS)
     zmk_widget_layer_status_init(&layer_status_widget, screen);
     lv_obj_set_style_text_font(zmk_widget_layer_status_obj(&layer_status_widget),
                                &lv_font_montserrat_16, LV_PART_MAIN);
-    lv_obj_align(zmk_widget_layer_status_obj(&layer_status_widget), LV_ALIGN_BOTTOM_MID, 0, -5);
+    lv_obj_align(zmk_widget_layer_status_obj(&layer_status_widget), LV_ALIGN_BOTTOM_MID, 0, -4);
 #endif
 
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
