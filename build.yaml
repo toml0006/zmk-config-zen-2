@@ -1,8 +1,6 @@
 include:
   - board: corneish_zen_mod_left@2.0.0//zmk
-    snippet: zmk-usb-logging  # TEMPORARY: debug battery reading
-    artifact-name: corneish_zen_mod_left_debug
-  - board: corneish_zen_mod_left@2.0.0//zmk
+    # snippet: zmk-usb-logging  # uncomment to enable logging
   - board: corneish_zen_mod_right@2.0.0//zmk
   - board: corneish_zen_mod_left@2.0.0//zmk
     snippet: studio-rpc-usb-uart
