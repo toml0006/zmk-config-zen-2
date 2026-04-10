@@ -83,7 +83,16 @@ int zmk_widget_mod_status_init(struct zmk_widget_mod_status *widget, lv_obj_t *p
     widget->obj = lv_label_create(parent);
     if (widget->obj != NULL) {
         lv_obj_set_style_text_font(widget->obj, &mac_mods_26, LV_PART_MAIN);
-        lv_label_set_text(widget->obj, "");
+        // TEMP DIAGNOSTIC: show all 4 glyphs at boot so we can visually
+        // verify the font can render multi-glyph strings. If only one
+        // shows up at rest, the font advance widths are wrong. If all 4
+        // show up at rest, concatenation works and the "only one at a
+        // time" issue is pure e-paper lag catching the latest state.
+        lv_label_set_text(widget->obj,
+                          "\xE2\x8C\x83"    // ⌃
+                          "\xE2\x87\xA7"    // ⇧
+                          "\xE2\x8C\xA5"    // ⌥
+                          "\xE2\x8C\x98");  // ⌘
     }
 
     sys_slist_append(&widgets, &widget->node);
