@@ -52,23 +52,23 @@ static uint8_t local_lithium_mv_to_pct(int bat_mv) {
     return (uint8_t)(bat_mv * 2 / 15 - 459);
 }
 
-// Read the chosen battery sensor directly and return a percentage.
-// Returns -1 if the sensor is unavailable.
+// Read the chosen battery sensor's state-of-charge channel directly.
+// Works with fuel gauge chips like bq274xx that report SOC natively.
+// Returns -1 if unavailable.
 static int read_battery_level_direct(void) {
 #if DT_HAS_CHOSEN(zmk_battery)
     const struct device *batt = DEVICE_DT_GET(DT_CHOSEN(zmk_battery));
     if (!device_is_ready(batt)) {
         return -1;
     }
-    if (sensor_sample_fetch_chan(batt, SENSOR_CHAN_GAUGE_VOLTAGE) != 0) {
+    if (sensor_sample_fetch(batt) != 0) {
         return -1;
     }
     struct sensor_value v;
-    if (sensor_channel_get(batt, SENSOR_CHAN_GAUGE_VOLTAGE, &v) != 0) {
+    if (sensor_channel_get(batt, SENSOR_CHAN_GAUGE_STATE_OF_CHARGE, &v) != 0) {
         return -1;
     }
-    int mv = v.val1 * 1000 + (v.val2 / 1000);
-    return local_lithium_mv_to_pct(mv);
+    return (int)v.val1;
 #else
     return -1;
 #endif
@@ -103,36 +103,8 @@ static void set_battery_symbol(lv_obj_t *icon, lv_obj_t *label,
     }
 
     if (label != NULL) {
-        // TEMP: query both SOC and VOLTAGE channels to see what the driver
-        // actually has stored. SENSOR_CHAN_ALL fetch populates both.
-        // Shows "soc:A.B" where A is raw val1 and B is raw val2 in mV units.
-        char buf[20];
-#if DT_HAS_CHOSEN(zmk_battery)
-        const struct device *batt = DEVICE_DT_GET(DT_CHOSEN(zmk_battery));
-        if (!device_is_ready(batt)) {
-            snprintf(buf, sizeof(buf), "NODEV");
-        } else {
-            // Fetch all channels at once
-            int rc = sensor_sample_fetch(batt);
-            if (rc != 0) {
-                snprintf(buf, sizeof(buf), "F%d", rc);
-            } else {
-                struct sensor_value soc, vlt;
-                int rc1 = sensor_channel_get(batt, SENSOR_CHAN_GAUGE_STATE_OF_CHARGE, &soc);
-                int rc2 = sensor_channel_get(batt, SENSOR_CHAN_GAUGE_VOLTAGE, &vlt);
-                if (rc1 != 0 || rc2 != 0) {
-                    snprintf(buf, sizeof(buf), "G%d,%d", rc1, rc2);
-                } else {
-                    // soc.val1 = percentage directly
-                    // vlt.val1 = volts, vlt.val2 = microvolts remainder
-                    int mv = vlt.val1 * 1000 + (vlt.val2 / 1000);
-                    snprintf(buf, sizeof(buf), "%d:%d", (int)soc.val1, mv);
-                }
-            }
-        }
-#else
-        snprintf(buf, sizeof(buf), "NOCHO");
-#endif
+        char buf[6];
+        snprintf(buf, sizeof(buf), "%d%%", level);
         lv_label_set_text(label, buf);
     }
 }

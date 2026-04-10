@@ -8,7 +8,7 @@
 /{
     chosen {
         zephyr,display = &epd;
-        zmk,battery = &vbatt;
+        zmk,battery = &fuelgauge;
     };
 
     kscan0: kscan {
@@ -40,15 +40,6 @@
         };
     };
 
-    vbatt: vbatt {
-        compatible = "zmk,battery-nrf-vddh";
-    };
-};
-
-// Enable HV regulator so VDDHDIV5 measures battery voltage.
-// Matches nice_nano_v2 overlay.
-&reg0 {
-    status = "okay";
 };
 
 &default_transform {
@@ -76,6 +67,21 @@
             low-power-enable;
         };
     };
+
+    i2c0_default: i2c0_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 16)>,
+                <NRF_PSEL(TWIM_SCL, 0, 13)>;
+        };
+    };
+
+    i2c0_sleep: i2c0_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 16)>,
+                <NRF_PSEL(TWIM_SCL, 0, 13)>;
+            low-power-enable;
+        };
+    };
 };
 
 &spi0 {
@@ -98,5 +104,25 @@
         pwr = [03 00 26 26];
         cdi = <0xd2>;
         tcon = <0x22>;
+    };
+};
+
+// BQ274xx fuel gauge on the right half (different I2C pins than left)
+&i2c0 {
+    status = "okay";
+    compatible = "nordic,nrf-twim";
+    pinctrl-0 = <&i2c0_default>;
+    pinctrl-1 = <&i2c0_sleep>;
+    pinctrl-names = "default", "sleep";
+    clock-frequency = <100000>;
+
+    fuelgauge: bq274xx@55 {
+        compatible = "ti,bq274xx";
+        reg = <0x55>;
+        design-voltage = <3700>;
+        design-capacity = <180>;
+        taper-current = <2>;
+        terminate-voltage = <2750>;
+        int-gpios = <&gpio1 5 GPIO_ACTIVE_LOW>;
     };
 };

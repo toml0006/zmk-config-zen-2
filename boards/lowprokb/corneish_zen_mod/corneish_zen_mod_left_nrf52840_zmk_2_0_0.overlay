@@ -8,7 +8,7 @@
 /{
     chosen {
         zephyr,display = &epd;
-        zmk,battery = &vbatt;
+        zmk,battery = &fuelgauge;
     };
 
     kscan0: kscan {
@@ -40,18 +40,6 @@
         };
     };
 
-    vbatt: vbatt {
-        compatible = "zmk,battery-nrf-vddh";
-    };
-
-};
-
-// Enable the high voltage regulator so VDDH is the input rail and
-// SAADC VDDHDIV5 measures actual battery voltage. Without this the
-// chip stays in normal voltage mode and VDDHDIV5 returns garbage.
-// Matches nice_nano_v2 overlay.
-&reg0 {
-    status = "okay";
 };
 
 &pinctrl {
@@ -60,6 +48,21 @@
             psels = <NRF_PSEL(SPIM_SCK, 0, 27)>,
                 <NRF_PSEL(SPIM_MOSI, 0, 8)>,
                 <NRF_PSEL(SPIM_MISO, 0, 22)>;
+        };
+    };
+
+    i2c0_default: i2c0_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 6)>,
+                <NRF_PSEL(TWIM_SCL, 0, 26)>;
+        };
+    };
+
+    i2c0_sleep: i2c0_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 6)>,
+                <NRF_PSEL(TWIM_SCL, 0, 26)>;
+            low-power-enable;
         };
     };
 
@@ -93,5 +96,27 @@
         pwr = [03 00 26 26];
         cdi = <0xd2>;
         tcon = <0x22>;
+    };
+};
+
+// BQ27441 / BQ274xx fuel gauge chip — carried over from the V1 Zen
+// overlay which used this same chip. The V2 hardware is unclear so
+// we're trying this approach after nrf-vddh returned garbage.
+&i2c0 {
+    status = "okay";
+    compatible = "nordic,nrf-twim";
+    pinctrl-0 = <&i2c0_default>;
+    pinctrl-1 = <&i2c0_sleep>;
+    pinctrl-names = "default", "sleep";
+    clock-frequency = <100000>;
+
+    fuelgauge: bq274xx@55 {
+        compatible = "ti,bq274xx";
+        reg = <0x55>;
+        design-voltage = <3700>;
+        design-capacity = <180>;
+        taper-current = <2>;
+        terminate-voltage = <2750>;
+        int-gpios = <&gpio1 14 GPIO_ACTIVE_LOW>;
     };
 };
