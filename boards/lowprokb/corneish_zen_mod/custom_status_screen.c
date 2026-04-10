@@ -52,14 +52,18 @@ static struct zmk_widget_mod_status mod_status_widget;
 // LEFT (central):
 //   y=2..28   battery icon (left) + BT/USB icon (right)  — row 1
 //   y=30..44  battery percentage (below battery icon), small
-//   y=48..66  modifier indicators (C S A G)              — row 2
-//   y=70..125 layer heading + layer name                 — row 3
+//   y=48..62  modifier indicators ("C S A G")            — row 2a
+//   y=62..78  WPM ("NN wpm")                             — row 2b
+//   y=82..125 layer heading + layer name                 — row 3
 //
 // RIGHT (peripheral):
 //   y=2..28   battery icon (left) + check/X (right)      — row 1
 //   y=30..44  battery percentage
-//   y=48..70  WPM ("NN wpm")                             — row 2
-//   y=78..118 16×16 space invader                        — row 3
+//   y=55..120 16×16 space invader (scaled 3x)            — row 2+3
+//
+// NOTE: WPM lives on the LEFT half because ZMK's WPM subsystem tracks
+// keycode_state_changed events, which only fire on the central. The
+// peripheral can't compute or proxy WPM without custom infrastructure.
 
 lv_obj_t *zmk_display_status_screen() {
 
@@ -90,7 +94,7 @@ lv_obj_t *zmk_display_status_screen() {
                  -8, 4);
 #endif
 
-    // ---- Row 2: modifier indicators (left) or WPM (right) ----
+    // ---- Row 2 (left half): modifiers stacked above WPM ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_MOD_STATUS)
     zmk_widget_mod_status_init(&mod_status_widget, screen);
     lv_obj_align(zmk_widget_mod_status_obj(&mod_status_widget), LV_ALIGN_TOP_MID, 0, 48);
@@ -98,7 +102,7 @@ lv_obj_t *zmk_display_status_screen() {
 
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_WPM_STATUS)
     zmk_widget_wpm_status_init(&wpm_status_widget, screen);
-    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 48);
+    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 66);
 #endif
 
     // ---- Row 3: layer widget (left) or invader pixel art (right) ----

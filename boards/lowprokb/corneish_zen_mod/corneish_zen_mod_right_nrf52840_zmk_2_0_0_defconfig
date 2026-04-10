@@ -55,11 +55,9 @@ CONFIG_CUSTOM_WIDGET_BATTERY_STATUS=y
 CONFIG_ZMK_WIDGET_BATTERY_STATUS=n
 CONFIG_CUSTOM_WIDGET_PERIPHERAL_STATUS=y
 CONFIG_ZMK_WIDGET_PERIPHERAL_STATUS=n
-CONFIG_CUSTOM_WIDGET_WPM_STATUS=y
-
-# WPM tracking for the custom WPM widget (the right half observes
-# the central's WPM over the split link)
-CONFIG_ZMK_WPM=y
+# WPM cannot run on the peripheral — wpm.c references
+# as_zmk_keycode_state_changed which only exists on the central.
+# WPM widget + CONFIG_ZMK_WPM only enabled on the left half.
 
 # Turn on logging, and set ZMK logging to debug output
 #CONFIG_LOG=y
