@@ -40,7 +40,8 @@ LV_IMG_DECLARE(batt_5_chg);
 LV_IMG_DECLARE(batt_0);
 LV_IMG_DECLARE(batt_0_chg);
 
-static void set_battery_symbol(lv_obj_t *icon, struct battery_status_state state) {
+static void set_battery_symbol(lv_obj_t *icon, lv_obj_t *label,
+                               struct battery_status_state state) {
     uint8_t level = state.level;
 
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
@@ -62,11 +63,17 @@ static void set_battery_symbol(lv_obj_t *icon, struct battery_status_state state
     } else {
         lv_image_set_src(icon, usb ? &batt_0_chg : &batt_0);
     }
+
+    char buf[6];
+    snprintf(buf, sizeof(buf), "%d%%", level);
+    lv_label_set_text(label, buf);
 }
 
 void battery_status_update_cb(struct battery_status_state state) {
     struct zmk_widget_battery_status *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_battery_symbol(widget->obj, state); }
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
+        set_battery_symbol(widget->icon, widget->label, state);
+    }
 }
 
 static struct battery_status_state battery_status_get_state(const zmk_event_t *eh) {
@@ -89,7 +96,21 @@ ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
 
 int zmk_widget_battery_status_init(struct zmk_widget_battery_status *widget, lv_obj_t *parent) {
-    widget->obj = lv_image_create(parent);
+    // Container holds the battery icon + a percentage label side-by-side.
+    widget->obj = lv_obj_create(parent);
+    lv_obj_set_size(widget->obj, 70, 24);
+    lv_obj_set_style_pad_all(widget->obj, 0, LV_PART_MAIN);
+    lv_obj_set_style_border_width(widget->obj, 0, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(widget->obj, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_clear_flag(widget->obj, LV_OBJ_FLAG_SCROLLABLE);
+
+    widget->icon = lv_image_create(widget->obj);
+    lv_obj_align(widget->icon, LV_ALIGN_LEFT_MID, 0, 0);
+
+    widget->label = lv_label_create(widget->obj);
+    lv_obj_set_style_text_font(widget->label, &lv_font_montserrat_16, LV_PART_MAIN);
+    lv_obj_align(widget->label, LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_label_set_text(widget->label, "--%");
 
     sys_slist_append(&widgets, &widget->node);
     widget_battery_status_init();
