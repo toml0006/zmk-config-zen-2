@@ -103,8 +103,9 @@ static void set_battery_symbol(lv_obj_t *icon, lv_obj_t *label,
     }
 
     if (label != NULL) {
-        // TEMP: show both mV and % so we can see what's happening
-        char buf[16];
+        // TEMP: show "pct/mv" so we can see both the computed percentage
+        // from read_battery_level_direct() and the raw mV reading.
+        char buf[20];
 #if DT_HAS_CHOSEN(zmk_battery)
         const struct device *batt = DEVICE_DT_GET(DT_CHOSEN(zmk_battery));
         if (!device_is_ready(batt)) {
@@ -120,7 +121,8 @@ static void set_battery_symbol(lv_obj_t *icon, lv_obj_t *label,
                     snprintf(buf, sizeof(buf), "G%d", rc);
                 } else {
                     int mv = v.val1 * 1000 + (v.val2 / 1000);
-                    snprintf(buf, sizeof(buf), "%d", mv);
+                    uint8_t pct = local_lithium_mv_to_pct(mv);
+                    snprintf(buf, sizeof(buf), "%d/%d", pct, mv);
                 }
             }
         }
