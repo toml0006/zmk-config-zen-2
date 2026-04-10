@@ -31,6 +31,30 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 LV_IMG_DECLARE(layers2);
 LV_IMG_DECLARE(invader);
+LV_IMG_DECLARE(pacman);
+LV_IMG_DECLARE(ghost);
+
+// Rotation cycle for the right-half pixel art. One refresh every
+// ROTATE_INTERVAL_MS; at 30 min that's ~48 extra partial refreshes per
+// day (~0.07 mAh on a 180 mAh battery — negligible).
+#define ROTATE_INTERVAL_MS (30 * 60 * 1000)
+static const lv_image_dsc_t *const pixel_art_cycle[] = {
+    &invader,
+    &pacman,
+    &ghost,
+};
+#define PIXEL_ART_COUNT (sizeof(pixel_art_cycle) / sizeof(pixel_art_cycle[0]))
+
+static lv_obj_t *rotating_art_obj = NULL;
+static size_t rotating_art_index = 0;
+
+static void rotate_pixel_art_cb(lv_timer_t *t) {
+    if (rotating_art_obj == NULL) {
+        return;
+    }
+    rotating_art_index = (rotating_art_index + 1) % PIXEL_ART_COUNT;
+    lv_image_set_src(rotating_art_obj, pixel_art_cycle[rotating_art_index]);
+}
 
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_BATTERY_TEXT)
 static struct zmk_widget_battery_text battery_text_widget;
@@ -132,12 +156,12 @@ lv_obj_t *zmk_display_status_screen() {
 #endif
 
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-    // 48x48 invader centered in the lower third of the 128-px display.
-    // Lower third = y 85..128; center y = 106. For a 48-tall image
-    // with LV_ALIGN_BOTTOM_MID, offset = -(128 - 106 - 24) ≈ -2.
-    lv_obj_t *invader_icon = lv_image_create(screen);
-    lv_image_set_src(invader_icon, &invader);
-    lv_obj_align(invader_icon, LV_ALIGN_BOTTOM_MID, 0, -2);
+    // Rotating pixel art in the lower third. Starts on the classic
+    // invader and cycles through pacman/ghost every 30 minutes.
+    rotating_art_obj = lv_image_create(screen);
+    lv_image_set_src(rotating_art_obj, pixel_art_cycle[0]);
+    lv_obj_align(rotating_art_obj, LV_ALIGN_BOTTOM_MID, 0, -2);
+    lv_timer_create(rotate_pixel_art_cb, ROTATE_INTERVAL_MS, NULL);
 #endif
 
     return screen;

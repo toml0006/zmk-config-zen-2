@@ -61,6 +61,8 @@ if(CONFIG_ZMK_DISPLAY)
   if(NOT CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     zephyr_library_sources(widgets/icons/zenlogo.c)
     zephyr_library_sources(widgets/icons/invader.c)
+    zephyr_library_sources(widgets/icons/pacman.c)
+    zephyr_library_sources(widgets/icons/ghost.c)
   endif()
 endif()
 
