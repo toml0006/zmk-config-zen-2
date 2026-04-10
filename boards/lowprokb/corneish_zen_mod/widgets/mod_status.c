@@ -59,7 +59,19 @@ static void set_mod_text(lv_obj_t *label, struct mod_status_state state) {
     lv_label_set_text(label, text);
 }
 
+// Cache the last mods value so we only actually call lv_label_set_text
+// when it truly changed. lv_label_set_text invalidates unconditionally,
+// which on e-paper means a full partial refresh per keypress — terrible.
+// Letters and other non-modifier keys leave this value unchanged so the
+// widget stays quiet unless a modifier is pressed/released.
+static uint8_t last_mods = 0xFF;  // 0xFF == uninitialized sentinel
+
 static void mod_status_update_cb(struct mod_status_state state) {
+    if (state.mods == last_mods) {
+        return;  // dedup — skip redraw
+    }
+    last_mods = state.mods;
+
     struct zmk_widget_mod_status *widget;
     SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_mod_text(widget->obj, state); }
 }

@@ -21,6 +21,9 @@
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_DEVICE_NAME)
 #include "widgets/device_name.h"
 #endif
+#if IS_ENABLED(CONFIG_CUSTOM_WIDGET_MOD_STATUS)
+#include "widgets/mod_status.h"
+#endif
 #include "custom_status_screen.h"
 
 #include <zephyr/logging/log.h>
@@ -51,6 +54,10 @@ static struct zmk_widget_wpm_status wpm_status_widget;
 
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_DEVICE_NAME)
 static struct zmk_widget_device_name device_name_widget;
+#endif
+
+#if IS_ENABLED(CONFIG_CUSTOM_WIDGET_MOD_STATUS)
+static struct zmk_widget_mod_status mod_status_widget;
 #endif
 
 // Display is 80 × 128 (IL0323). Layout:
@@ -102,16 +109,17 @@ lv_obj_t *zmk_display_status_screen() {
     // ---- Row 3 (left): WPM ----
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_WPM_STATUS)
     zmk_widget_wpm_status_init(&wpm_status_widget, screen);
-    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 46);
+    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 44);
 #endif
 
-    // ---- Row 4 (left): layer widget / right: pixel art ----
-#if IS_ENABLED(CONFIG_CUSTOM_WIDGET_LAYER_STATUS)
-    lv_obj_t *LayersHeading;
-    LayersHeading = lv_image_create(screen);
-    lv_obj_align(LayersHeading, LV_ALIGN_BOTTOM_MID, 0, -30);
-    lv_image_set_src(LayersHeading, &layers2);
+    // ---- Row 4 (left): modifier indicators ----
+#if IS_ENABLED(CONFIG_CUSTOM_WIDGET_MOD_STATUS)
+    zmk_widget_mod_status_init(&mod_status_widget, screen);
+    lv_obj_align(zmk_widget_mod_status_obj(&mod_status_widget), LV_ALIGN_TOP_MID, 0, 62);
+#endif
 
+    // ---- Row 5 (left): layer name (no heading image to save space) ----
+#if IS_ENABLED(CONFIG_CUSTOM_WIDGET_LAYER_STATUS)
     zmk_widget_layer_status_init(&layer_status_widget, screen);
     lv_obj_set_style_text_font(zmk_widget_layer_status_obj(&layer_status_widget),
                                &lv_font_montserrat_16, LV_PART_MAIN);
