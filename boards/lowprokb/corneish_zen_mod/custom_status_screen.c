@@ -132,9 +132,12 @@ lv_obj_t *zmk_display_status_screen() {
 #endif
 
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+    // 48x48 invader centered in the lower third of the 128-px display.
+    // Lower third = y 85..128; center y = 106. For a 48-tall image
+    // with LV_ALIGN_BOTTOM_MID, offset = -(128 - 106 - 24) ≈ -2.
     lv_obj_t *invader_icon = lv_image_create(screen);
     lv_image_set_src(invader_icon, &invader);
-    lv_obj_align(invader_icon, LV_ALIGN_BOTTOM_MID, 0, -30);
+    lv_obj_align(invader_icon, LV_ALIGN_BOTTOM_MID, 0, -2);
 #endif
 
     return screen;
