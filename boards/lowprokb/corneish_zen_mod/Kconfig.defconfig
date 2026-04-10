@@ -81,4 +81,11 @@ menuconfig CUSTOM_WIDGET_LAYER_STATUS
 menuconfig CUSTOM_WIDGET_PERIPHERAL_STATUS
     bool "custom peripheral status widget"
 
+menuconfig CUSTOM_WIDGET_WPM_STATUS
+    bool "custom WPM status widget"
+    depends on ZMK_WPM
+
+menuconfig CUSTOM_WIDGET_MOD_STATUS
+    bool "custom modifier status widget"
+
 endif # BOARD_CORNEISH_ZEN_MOD_LEFT || BOARD_CORNEISH_ZEN_MOD_RIGHT
