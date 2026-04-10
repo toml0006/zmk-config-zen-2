@@ -54,10 +54,9 @@ if(CONFIG_ZMK_DISPLAY)
     zephyr_library_sources(widgets/icons/layers2.c)
   endif()
   if(CONFIG_CUSTOM_WIDGET_MOD_STATUS)
-    zephyr_library_sources(widgets/icons/mod_ctrl.c)
-    zephyr_library_sources(widgets/icons/mod_shift.c)
-    zephyr_library_sources(widgets/icons/mod_opt.c)
-    zephyr_library_sources(widgets/icons/mod_cmd.c)
+    # Custom LVGL font (mac_mods_26) generated from Apple Symbols.ttf
+    # with lv_font_conv. Contains only the 4 glyphs ⌃⇧⌥⌘ at 26 pt.
+    zephyr_library_sources(widgets/fonts/mac_mods_26.c)
   endif()
   if(NOT CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     zephyr_library_sources(widgets/icons/zenlogo.c)

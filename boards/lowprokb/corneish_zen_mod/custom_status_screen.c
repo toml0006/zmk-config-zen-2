@@ -123,24 +123,12 @@ lv_obj_t *zmk_display_status_screen() {
     lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_MID, 0, 52);
 #endif
 
-    // ---- Row 4 (left): modifier indicators (pixel-art icons) ----
-    // Position the 4 icons side-by-side, centered horizontally in a row
-    // at y=72. Each icon is 16x16. With a 4 px gap between icons the
-    // group width is 16*4 + 3*4 = 76 px, centered in 80 = 2 px left/right
-    // margin.
-    //
-    // LVGL's LV_OBJ_FLAG_HIDDEN doesn't reflow siblings, so each icon
-    // keeps its slot even when hidden. Layout is stable regardless of
-    // which modifiers are held.
+    // ---- Row 4 (left): modifier indicators (mac_mods_26 font) ----
+    // Single label rendering the currently-held modifiers as Mac glyphs
+    // via the custom 26pt font. Centered horizontally on the display.
 #if IS_ENABLED(CONFIG_CUSTOM_WIDGET_MOD_STATUS)
     zmk_widget_mod_status_init(&mod_status_widget, screen);
-    const int32_t mod_y = 72;
-    const int32_t mod_step = 20;   // 16 px icon + 4 px gap
-    const int32_t mod_start_x = 2; // (80 - (4*16 + 3*4)) / 2 = 2
-    lv_obj_align(mod_status_widget.ctrl_icon,  LV_ALIGN_TOP_LEFT, mod_start_x + 0 * mod_step, mod_y);
-    lv_obj_align(mod_status_widget.shift_icon, LV_ALIGN_TOP_LEFT, mod_start_x + 1 * mod_step, mod_y);
-    lv_obj_align(mod_status_widget.opt_icon,   LV_ALIGN_TOP_LEFT, mod_start_x + 2 * mod_step, mod_y);
-    lv_obj_align(mod_status_widget.cmd_icon,   LV_ALIGN_TOP_LEFT, mod_start_x + 3 * mod_step, mod_y);
+    lv_obj_align(zmk_widget_mod_status_obj(&mod_status_widget), LV_ALIGN_TOP_MID, 0, 72);
 #endif
 
     // ---- Row 5 (left): layer name ----
