@@ -88,7 +88,8 @@ static void battery_text_refresh_cb(lv_timer_t *t) {
 int zmk_widget_battery_text_init(struct zmk_widget_battery_text *widget, lv_obj_t *parent) {
     widget->obj = lv_label_create(parent);
     if (widget->obj != NULL) {
-        lv_obj_set_style_text_font(widget->obj, &lv_font_montserrat_16, LV_PART_MAIN);
+        // Use the bigger 26pt font so the battery glyph is prominent.
+        lv_obj_set_style_text_font(widget->obj, &lv_font_montserrat_26, LV_PART_MAIN);
         lv_label_set_text(widget->obj, LV_SYMBOL_BATTERY_EMPTY);
     }
 
