@@ -1,0 +1,174 @@
+layout: {qmk_keyboard: crkbd/rev1, layout_name: LAYOUT_split_3x6_3}
+layers:
+  QWERTY:
+  - ⇥
+  - Q
+  - W
+  - E
+  - R
+  - T
+  - Y
+  - U
+  - I
+  - O
+  - P
+  - ⌫
+  - {t: ⎋, h: ⌥}
+  - A
+  - S
+  - D
+  - F
+  - G
+  - H
+  - J
+  - K
+  - L
+  - ;
+  - ''''
+  - ⇧
+  - Z
+  - X
+  - C
+  - V
+  - B
+  - N
+  - M
+  - ','
+  - .
+  - /
+  - ⇧
+  - ⌘
+  - NUMBER
+  - ␣
+  - ⏎
+  - SYMBOL
+  - ⌃
+  NUMBER:
+  - '~'
+  - '1'
+  - '2'
+  - '3'
+  - '4'
+  - '5'
+  - '6'
+  - '7'
+  - '8'
+  - '9'
+  - '0'
+  - ⌫
+  - {type: trans}
+  - {t: ᛒ, h: '0'}
+  - {t: ᛒ, h: '1'}
+  - {t: ᛒ, h: '2'}
+  - {t: ᛒ, h: '3'}
+  - {t: ᛒ, h: '4'}
+  - {type: trans}
+  - HOME
+  - ↑
+  - END
+  - PG UP
+  - {type: trans}
+  - ⇧
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - ←
+  - ↓
+  - →
+  - PG DN
+  - '~'
+  - ⌘
+  - {t: NUMBER, type: held}
+  - ␣
+  - ⏎
+  - SYMBOL
+  - ⌃
+  SYMBOL:
+  - '~'
+  - '!'
+  - '@'
+  - '#'
+  - $
+  - '%'
+  - ^
+  - '&'
+  - '*'
+  - (
+  - )
+  - ⌫
+  - {t: ⎋, h: ⌥}
+  - ⌘⇧[
+  - ⌘⇧]
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - '-'
+  - '='
+  - '['
+  - ']'
+  - \
+  - '`'
+  - ⇧
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - _
+  - +
+  - '{'
+  - '}'
+  - '|'
+  - '~'
+  - ⌘
+  - NUMBER
+  - ␣
+  - ⏎
+  - {t: SYMBOL, type: held}
+  - ⌃
+  FN:
+  - ᛒ✕
+  - F1
+  - F2
+  - F3
+  - F4
+  - F5
+  - F6
+  - F7
+  - F8
+  - F9
+  - F10
+  - ⌦
+  - {type: trans}
+  - F12
+  - PREV
+  - PLAY
+  - NEXT
+  - {type: trans}
+  - {type: trans}
+  - VOL-
+  - VOL+
+  - MUTE
+  - {type: trans}
+  - {type: trans}
+  - ⇧
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - ⇧⌘4
+  - ⌃⇧⌘4
+  - ☀︎-
+  - ☀︎+
+  - {type: trans}
+  - {type: trans}
+  - {type: trans}
+  - ⌘
+  - {t: NUMBER, type: held}
+  - ␣
+  - ⏎
+  - {t: SYMBOL, type: held}
+  - ⌃
