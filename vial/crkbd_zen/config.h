@@ -1,0 +1,10 @@
+#pragma once
+
+#define VIAL_KEYBOARD_UID {0xC4, 0xA3, 0x12, 0xF1, 0x9D, 0x0E, 0x52, 0x7B}
+
+#define VIAL_UNLOCK_COMBO_ROWS { 0, 4 }
+#define VIAL_UNLOCK_COMBO_COLS { 0, 5 }
+
+#define DYNAMIC_KEYMAP_LAYER_COUNT 4
+
+#define TAPPING_TERM 200
