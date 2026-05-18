@@ -112,8 +112,8 @@ layers:
   - \
   - '`'
   - ⇧
-  - {type: trans}
-  - {type: trans}
+  - ⌘`
+  - ⌘⇧`
   - {type: trans}
   - {type: trans}
   - {type: trans}
