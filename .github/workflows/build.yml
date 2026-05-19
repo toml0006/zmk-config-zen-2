@@ -9,7 +9,7 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   corneish-zen-v2:
     name: Corneish Zen v2
-    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
+    uses: ./.github/workflows/build-user-config.yml
     with:
       archive_name: corneish-zen-v2
       build_matrix_path: corneish-zen-v2/build.yaml
@@ -17,7 +17,7 @@ jobs:
 
   corne-prospector:
     name: Corne + Prospector dongle
-    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
+    uses: ./.github/workflows/build-user-config.yml
     with:
       archive_name: corne-prospector
       build_matrix_path: corne-prospector/build.yaml
@@ -25,7 +25,7 @@ jobs:
 
   corne-standalone:
     name: Corne (standalone, no dongle)
-    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
+    uses: ./.github/workflows/build-user-config.yml
     with:
       archive_name: corne-standalone
       build_matrix_path: corne-standalone/build.yaml
