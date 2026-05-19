@@ -5,3 +5,10 @@ zephyr/*
 modules/
 tools/
 .west/
+# macOS noise
+.DS_Store
+
+# Prospector module is pulled in by west via config/west.yml; the local
+# clone under prospector/module/ is reference only (nested git repo).
+prospector/module/
+.claude/
