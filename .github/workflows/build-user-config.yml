@@ -103,8 +103,8 @@ jobs:
       - name: Copy config files to isolated temporary directory
         run: |
           if [ "${{ env.base_dir }}" != "${GITHUB_WORKSPACE}" ]; then
-            mkdir -p "${{ env.base_dir }}/${{ inputs.config_path }}"
-            cp -R ${{ inputs.config_path }}/* "${{ env.base_dir }}/${{ inputs.config_path }}/"
+            mkdir -p "${{ env.base_dir }}/config"
+            cp -R ${{ inputs.config_path }}/* "${{ env.base_dir }}/config/"
           fi
 
       - name: Cache west modules
@@ -127,7 +127,7 @@ jobs:
 
       - name: West Init
         working-directory: ${{ env.base_dir }}
-        run: west init -l "${{ env.base_dir }}/${{ inputs.config_path }}"
+        run: west init -l "${{ env.base_dir }}/config"
 
       - name: West Update
         working-directory: ${{ env.base_dir }}
@@ -147,7 +147,7 @@ jobs:
       - name: West Build (${{ env.display_name }})
         working-directory: ${{ env.base_dir }}
         shell: sh -x {0}
-        run: west build -s zmk/app -d "${{ env.build_dir }}" -b "${{ matrix.board }}" ${{ env.extra_west_args }} -- -DZMK_CONFIG=${{ env.base_dir }}/${{ inputs.config_path }} ${{ env.extra_cmake_args }} ${{ matrix.cmake-args }}
+        run: west build -s zmk/app -d "${{ env.build_dir }}" -b "${{ matrix.board }}" ${{ env.extra_west_args }} -- -DZMK_CONFIG=${{ env.base_dir }}/config ${{ env.extra_cmake_args }} ${{ matrix.cmake-args }}
 
       - name: Warn about building from main if build fails
         if: failure() && env.zmk_revision == 'main'
@@ -160,7 +160,7 @@ jobs:
 
       - name: Check if building a board without explicit ZMK compat
         if: always()
-        working-directory: "${{ env.base_dir }}/${{ inputs.config_path }}"
+        working-directory: "${{ env.base_dir }}/config"
         run: |
           if ! (grep "CONFIG_ZMK_BOARD_COMPAT=y" "${{ env.build_dir }}/zephyr/.config" > /dev/null)
           then
