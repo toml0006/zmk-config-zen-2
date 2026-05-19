@@ -1,0 +1,3 @@
+/* The dongle is the split central — it owns the keymap.
+ * Reuse the shared Corne keymap so all three builds stay in sync. */
+#include "corne.keymap"

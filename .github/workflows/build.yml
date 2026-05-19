@@ -1,6 +1,32 @@
 name: Build ZMK firmware
+
+# Monorepo: one job per keyboard, each calling ZMK's reusable
+# build-user-config workflow with that keyboard's config / build matrix.
+# Artifacts are named per keyboard so they download separately.
+
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  build:
-    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
+  corneish-zen-v2:
+    name: Corneish Zen v2
+    uses: ./.github/workflows/build-user-config.yml
+    with:
+      archive_name: corneish-zen-v2
+      build_matrix_path: corneish-zen-v2/build.yaml
+      config_path: corneish-zen-v2/config
+
+  corne-prospector:
+    name: Corne + Prospector dongle
+    uses: ./.github/workflows/build-user-config.yml
+    with:
+      archive_name: corne-prospector
+      build_matrix_path: corne-prospector/build.yaml
+      config_path: corne-prospector/config
+
+  corne-standalone:
+    name: Corne (standalone, no dongle)
+    uses: ./.github/workflows/build-user-config.yml
+    with:
+      archive_name: corne-standalone
+      build_matrix_path: corne-standalone/build.yaml
+      config_path: corne-standalone/config

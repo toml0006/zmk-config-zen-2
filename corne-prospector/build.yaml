@@ -1,0 +1,20 @@
+---
+# Typeractive Corne (nice!nano v2) + Prospector dongle (XIAO BLE).
+# Both keyboard halves are split PERIPHERALS. The dongle is the split CENTRAL.
+include:
+  - board: nice_nano@2.0.0//zmk
+    shield: corne_left
+  - board: nice_nano@2.0.0//zmk
+    shield: corne_right
+  - board: xiao_ble//zmk
+    shield: corne_dongle prospector_adapter
+    snippet: studio-rpc-usb-uart
+    artifact-name: corne_prospector_dongle
+  # settings_reset images — flash to wipe stale BLE bonds, then reflash
+  # the real firmware. See https://zmk.dev/docs/troubleshooting#split-keyboard-halves-unable-to-pair
+  - board: nice_nano@2.0.0//zmk
+    shield: settings_reset
+    artifact-name: settings_reset_nice_nano
+  - board: xiao_ble//zmk
+    shield: settings_reset
+    artifact-name: settings_reset_xiao
