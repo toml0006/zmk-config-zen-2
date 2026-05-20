@@ -1,0 +1,21 @@
+manifest:
+  remotes:
+    - name: zmkfirmware
+      url-base: https://github.com/zmkfirmware
+    - name: prospector
+      url-base: https://github.com/t-ogura
+  projects:
+    - name: zmk
+      remote: zmkfirmware
+      revision: main
+      import: app/west.yml
+    # t-ogura fork of the Prospector module: adds the prospector_scanner
+    # shield (passive BLE observer) and the keyboard-side status-advertisement
+    # broadcaster. Different repo from the carrefinho fork used by
+    # corne-prospector — they cannot share a west workspace.
+    - name: prospector-zmk-module
+      remote: prospector
+      revision: v2.2.1
+      path: modules/prospector-zmk-module
+  self:
+    path: config

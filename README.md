@@ -6,8 +6,9 @@ builds each on push and ships separate artifacts.
 ```
 .
 ├── corneish-zen-v2/      Corneish Zen v2 (low-profile wireless, LOWPROKB)
-├── corne-prospector/     Corne (Typeractive) with Prospector display dongle
+├── corne-prospector/     Corne (Typeractive) with Prospector dongle as central
 ├── corne-standalone/     Corne (Typeractive) plain — dongle-less
+├── corne-scanner/        Corne (Typeractive) + passive Prospector scanner
 ├── boards/               Custom boards + shields (board_root for all configs)
 │   ├── lowprokb/corneish_zen_mod/
 │   └── shields/corne_dongle/
@@ -24,19 +25,30 @@ builds each on push and ships separate artifacts.
 | `corneish-zen-v2/` | Corneish Zen v2 halves (LOWPROKB) | Standard split | Custom boards under `boards/lowprokb/corneish_zen_mod/`. Left half has a `..._with_studio` variant for live editing via ZMK Studio. |
 | `corne-prospector/` | Typeractive Corne (nice!nano v2) + XIAO BLE Prospector dongle | Dongle = central, both halves = peripherals | Dongle owns the keymap. Custom `corne_dongle` shield + `prospector_adapter` shield from [carrefinho/prospector-zmk-module](https://github.com/carrefinho/prospector-zmk-module) (`feat/new-status-screens`). ZMK Studio enabled (USB to dongle). |
 | `corne-standalone/` | Typeractive Corne (nice!nano v2) + nice!view displays | Left = central, right = peripheral | Same W-CORNE keymap as the dongle build. Works fully on its own — no dongle. Left half has a `..._with_studio` variant. |
+| `corne-scanner/` | Same as standalone + a Prospector unit acting as a passive scanner | Left = central, right = peripheral, scanner = observer (no link) | Keyboard fully independent; the Prospector listens to BLE status adverts and renders them. Uses the [t-ogura fork](https://github.com/t-ogura/zmk-config-prospector) of the prospector module (`v2.2.1`) — supplies the broadcaster (`CONFIG_ZMK_STATUS_ADVERTISEMENT`) and `prospector_scanner` shield. |
 
-### Corne: with or without the dongle
+### Corne: three flavors
 
-The two Corne configs are **interchangeable on the same hardware** — pick by
+All three Corne configs run on **the same nice!nano v2 halves** — pick by
 which firmware set you flash:
 
-- **`corne-prospector`** → keyboard needs the dongle to function (halves are
-  peripherals to it). Prospector display shows live layer, batteries,
-  modifiers. Sleeker desk presence, more pieces.
-- **`corne-standalone`** → keyboard works on its own. nice!view displays on
-  the halves show their own status. Dongle does nothing (the Prospector
-  module is central-only — it has no peripheral or scanner mode on the
-  branch we use).
+- **`corne-prospector`** → dongle = central, both halves = peripherals.
+  Keyboard does not work without the dongle. Prospector display shows
+  layer / batteries / modifiers fed from the central. Uses the
+  [carrefinho fork](https://github.com/carrefinho/prospector-zmk-module)
+  of the Prospector module (`feat/new-status-screens`).
+- **`corne-standalone`** → left = central, right = peripheral. Keyboard
+  works on its own; nice!view displays on the halves show their own
+  status. No dongle in the picture.
+- **`corne-scanner`** → same standalone topology, plus the Prospector
+  acts as a **passive scanner** that listens to BLE status adverts the
+  central broadcasts. Unplug or move the scanner; keyboard keeps
+  working. Uses the [t-ogura fork](https://github.com/t-ogura/zmk-config-prospector)
+  of the Prospector module (`v2.2.1`), which adds the broadcaster and a
+  `prospector_scanner` shield.
+
+The two Prospector configs cannot share a Prospector simultaneously —
+flash whichever firmware matches the topology you want on the dongle.
 
 Switching: flash all three devices with the matching set. Clear BLE bonds
 first if pairing roles change (use the `settings_reset` shield — see
@@ -51,6 +63,7 @@ CI is on push to `main` (and PRs / manual dispatch). [Actions tab][actions]
 - `corneish-zen-v2.zip`
 - `corne-prospector.zip`
 - `corne-standalone.zip`
+- `corne-scanner.zip`
 
 Each archive contains the `.uf2` files for that keyboard. Drag onto the
 mounted bootloader volume (double-tap reset on the target device).
