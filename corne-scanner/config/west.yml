@@ -3,19 +3,19 @@ manifest:
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
     - name: prospector
-      url-base: https://github.com/t-ogura
+      url-base: https://github.com/toml0006
   projects:
     - name: zmk
       remote: zmkfirmware
       revision: main
       import: app/west.yml
-    # t-ogura fork of the Prospector module: adds the prospector_scanner
-    # shield (passive BLE observer) and the keyboard-side status-advertisement
-    # broadcaster. Different repo from the carrefinho fork used by
-    # corne-prospector — they cannot share a west workspace.
+    # Local fork of t-ogura/prospector-zmk-module @ v2.2.1 with a WPM
+    # arc added to the Radii status screen (centered below the layer
+    # name). Falls back to v2.2.1 behavior on every other layout.
+    # Upstream: https://github.com/t-ogura/prospector-zmk-module
     - name: prospector-zmk-module
       remote: prospector
-      revision: v2.2.1
+      revision: wpm-arc-radii
       path: modules/prospector-zmk-module
   self:
     path: config
