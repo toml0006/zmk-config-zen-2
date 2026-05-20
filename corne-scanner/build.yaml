@@ -1,0 +1,24 @@
+---
+# Corne (Typeractive, nice!nano v2) with nice!view + a Prospector Scanner.
+# The keyboard is a standalone split (left=central, right=peripheral) and
+# broadcasts status via BLE advertisements — the scanner is a passive
+# observer that never joins the split.
+include:
+  # Standalone Corne halves with nice!view displays. Left half also
+  # broadcasts status adverts for the scanner.
+  - board: nice_nano@2.0.0//zmk
+    shield: corne_left nice_view_adapter nice_view
+  - board: nice_nano@2.0.0//zmk
+    shield: corne_right nice_view_adapter nice_view
+
+  # Prospector Scanner — non-touch (display only).
+  - board: xiao_ble//zmk
+    shield: prospector_scanner
+    artifact-name: prospector_scanner
+
+  # Prospector Scanner — touch variant (CST816S swipe navigation).
+  # Layered on top of the non-touch conf via EXTRA_CONF_FILE.
+  - board: xiao_ble//zmk
+    shield: prospector_scanner
+    cmake-args: -DEXTRA_CONF_FILE=../../config/prospector_scanner_touch.conf
+    artifact-name: prospector_scanner_touch
