@@ -5,7 +5,12 @@ manifest:
   projects:
     - name: zmk
       remote: zmkfirmware
-      revision: main
+      # Pinned to a main commit (not a release tag): the build.yaml board spec
+      # nice_nano@2.0.0//zmk uses the //zmk board-variant qualifier from ZMK's
+      # Zephyr 4.1 migration (Dec 2025), which no released tag (<=v0.3.0, still
+      # Zephyr 3.5) supports. Pinning a SHA keeps the build reproducible while
+      # staying on the 4.1 line. Bump deliberately.
+      revision: ff09f2d0c9f13a868c8f71d71d9348ade438e4b6
       import: app/west.yml
   self:
     path: config
