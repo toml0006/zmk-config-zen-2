@@ -1,11 +1,16 @@
-# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v9)
-# KEA-like: vertical skirt (extrude up) -> tapered top (loft) -> SHELL the box ->
-# join SOLID raised cylinder -> PARAMETRIC dish (revolve cut, follows the params) ->
-# stems from the recessed ceiling, protruding STEM_PROTRUDE below the bottom plane.
+# Choc/MX keycap - parametric rebuild (v10)
+# Vertical skirt -> tapered loft -> shell box -> solid cylinder -> dish/bump ->
+# stems from the recessed ceiling. Configurable: U width, spacing, stem type,
+# top style.
+#
+# CHOICE PARAMETERS (script constants - set then RE-RUN; not live):
+#   U          key width in units (1, 1.25, 1.5, 2 ...). Depth always 1u.
+#   SPACING    "choc" (18x17) or "mx" (19.05 x 19.05)
+#   STEM_TYPE  "choc" (twin towers) or "mx" (+ cross mount)
+#   TOP_STYLE  "dish" (concave) or "bump" (convex dome)
 #
 # LIVE PARAMETERS (Modify > Change Parameters): skirt_h, taper_h, cyl_dia, cyl_h,
-#   dish_depth. The dish is now a REVOLVE bound to these, so changing taper_h /
-#   cyl_h / cyl_dia / dish_depth keeps the dish attached - no re-run needed for it.
+#   dish_depth (dish depth / bump height). Body + dish/bump track these live.
 #
 # HOW TO RUN: Utilities > ADD-INS > Scripts and Add-Ins (Shift+S) > Scripts >
 #   point at this folder > Run. Re-run after editing the block below.
@@ -14,29 +19,49 @@
 
 import adsk.core, adsk.fusion, traceback, math
 
+# ============================ CHOICES ============================
+U          = 1.0       # key width in units
+SPACING    = "choc"    # "choc" | "mx"
+STEM_TYPE  = "choc"    # "choc" | "mx"
+TOP_STYLE  = "dish"    # "dish" | "bump"
+
 # ============================ PARAMETERS (mm) ============================
-BASE_X        = 17.5   # bottom footprint X (Choc-spaced 1u)
-BASE_Y        = 16.5   # bottom footprint Y
-TOP_X         = 15.5   # top footprint X (taper target)
-TOP_Y         = 14.6   # top footprint Y
-SKIRT_H       = 2.5    # vertical skirt height       -> LIVE param "skirt_h"
-TAPER_H       = 2.0    # lofted taper offset height  -> LIVE param "taper_h"
+TAPER_INSET_X = 2.0    # how much smaller the top is than the base, in X (total)
+TAPER_INSET_Y = 1.9    # ... in Y
+SKIRT_H       = 2.5    # vertical skirt height       -> LIVE "skirt_h"
+TAPER_H       = 2.0    # lofted taper offset height   -> LIVE "taper_h"
 CORNER_R      = 1.5    # cap corner radius
 
-CYL_DIA       = 13.0   # raised cylinder diameter    -> LIVE param "cyl_dia"
-CYL_H         = 1.5    # raised cylinder height       -> LIVE param "cyl_h"
-DISH_DEPTH    = 0.8    # spherical dish depth         -> LIVE param "dish_depth"
+CYL_DIA       = 13.0   # raised cylinder diameter     -> LIVE "cyl_dia"
+CYL_H         = 1.5    # raised cylinder height        -> LIVE "cyl_h"
+DISH_DEPTH    = 0.8    # dish depth OR bump height     -> LIVE "dish_depth"
 
-WALL          = 1.2    # shell wall thickness (hollow underside; box only)
+WALL          = 1.2    # shell wall thickness (box only)
 
-STEM_W        = 1.2    # stem tower width  (X)  -- Choc nominal
-STEM_L        = 3.0    # stem tower length (Y)  -- Choc nominal
-STEM_PITCH    = 5.7    # stem center-to-center (X)
-STEM_PROTRUDE = 1.4    # how far stems extend BELOW the cap bottom plane
-STEM_R        = 0.3    # stem corner radius
+# Choc stem (twin solid towers)
+CHOC_STEM_W   = 1.2
+CHOC_STEM_L   = 3.0
+CHOC_PITCH    = 5.7
+# MX stem (+ cross in a cylindrical boss)
+MX_STEM_DIA   = 5.5
+MX_CROSS_LEN  = 4.1
+MX_CROSS_W1   = 1.17   # vertical arm width
+MX_CROSS_W2   = 1.31   # horizontal arm width
+MX_CROSS_DEPTH= 3.9    # depth of the + cut up from the stem bottom
+# common stem
+STEM_PROTRUDE = 1.4    # how far the stem extends BELOW the cap bottom plane
+STEM_R        = 0.3    # choc tower corner radius
 
-COMP_NAME     = "Keycap_1u"
+COMP_NAME     = "Keycap"
 # =========================================================================
+
+# spacing table: pitch_x, pitch_y, cap gap
+_SPACING = {"choc": (18.0, 17.0, 0.5), "mx": (19.05, 19.05, 1.05)}
+PITCH_X, PITCH_Y, GAP = _SPACING[SPACING]
+BASE_X = U * PITCH_X - GAP
+BASE_Y = 1.0 * PITCH_Y - GAP
+TOP_X = BASE_X - TAPER_INSET_X
+TOP_Y = BASE_Y - TAPER_INSET_Y
 
 
 def cm(mm):
@@ -88,14 +113,11 @@ def ensure_param(design, name, expr, unit, comment):
 
 
 def lowest_horizontal_face(body):
-    best = None
-    best_z = 1e9
+    best, best_z = None, 1e9
     for f in body.faces:
         bb = f.boundingBox
-        if abs(bb.maxPoint.z - bb.minPoint.z) < 1e-5:
-            if bb.minPoint.z < best_z:
-                best_z = bb.minPoint.z
-                best = f
+        if abs(bb.maxPoint.z - bb.minPoint.z) < 1e-5 and bb.minPoint.z < best_z:
+            best_z, best = bb.minPoint.z, f
     return best
 
 
@@ -112,14 +134,13 @@ def run(context):
         root = design.rootComponent
 
         ensure_param(design, "skirt_h", "{} mm".format(SKIRT_H), "mm", "vertical skirt height")
-        ensure_param(design, "taper_h", "{} mm".format(TAPER_H), "mm", "lofted taper offset height (LIVE)")
+        ensure_param(design, "taper_h", "{} mm".format(TAPER_H), "mm", "lofted taper offset height")
         ensure_param(design, "cyl_dia", "{} mm".format(CYL_DIA), "mm", "raised cylinder diameter")
         ensure_param(design, "cyl_h", "{} mm".format(CYL_H), "mm", "raised cylinder height")
-        ensure_param(design, "dish_depth", "{} mm".format(DISH_DEPTH), "mm", "dish depth")
-        # spherical dish radius derived from cyl_dia + dish_depth (kept live)
+        ensure_param(design, "dish_depth", "{} mm".format(DISH_DEPTH), "mm", "dish depth / bump height")
         ensure_param(design, "dish_r",
                      "(((cyl_dia / 2) * (cyl_dia / 2)) + (dish_depth * dish_depth)) / (2 * dish_depth)",
-                     "mm", "derived dish sphere radius")
+                     "mm", "derived dish/bump sphere radius")
 
         for occ in list(root.occurrences):
             if occ.component.name == COMP_NAME:
@@ -142,6 +163,9 @@ def run(context):
                             adsk.core.ValueInput.createByString(expr))
             return planes.add(pin)
 
+        def cap_body():
+            return comp.bRepBodies.itemByName("Keycap")
+
         # --- 1. base profile + vertical skirt extrude ---
         sk_base = comp.sketches.add(comp.xYConstructionPlane)
         sk_base.isComputeDeferred = True
@@ -152,8 +176,7 @@ def run(context):
             adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
         ein.setDistanceExtent(False, adsk.core.ValueInput.createByString("skirt_h"))
         ext = feats.extrudeFeatures.add(ein)
-        body = ext.bodies.item(0)
-        body.name = "Keycap"
+        ext.bodies.item(0).name = "Keycap"
 
         # --- 2. loft taper from skirt top to smaller top ---
         plane_skirt = plane_expr("skirt_h")
@@ -175,16 +198,15 @@ def run(context):
         lin.isSolid = True
         feats.loftFeatures.add(lin)
 
-        # --- 3. shell the BOX (remove bottom face) -- before the cylinder ---
-        cap = comp.bRepBodies.itemByName("Keycap")
-        bottom = lowest_horizontal_face(cap)
+        # --- 3. shell the BOX (remove bottom face) ---
+        bottom = lowest_horizontal_face(cap_body())
         faces = adsk.core.ObjectCollection.create()
         faces.add(bottom)
         sh_in = feats.shellFeatures.createInput(faces, False)
         sh_in.insideThickness = val(WALL)
         feats.shellFeatures.add(sh_in)
 
-        # --- 4. raised SOLID cylinder (LIVE: cyl_dia / cyl_h), joined on top ---
+        # --- 4. raised SOLID cylinder (LIVE cyl_dia / cyl_h) ---
         sk_cyl = comp.sketches.add(plane_top)
         circ = sk_cyl.sketchCurves.sketchCircles.addByCenterRadius(
             p3(0, 0), cm(CYL_DIA / 2.0))
@@ -200,20 +222,26 @@ def run(context):
         cin.setDistanceExtent(False, adsk.core.ValueInput.createByString("cyl_h"))
         feats.extrudeFeatures.add(cin)
 
-        # --- 5. PARAMETRIC spherical dish: revolve a semicircle, cut ---
-        # Minimal driving constraints so the expressions actually drive it.
+        # --- 5. dish (concave Cut) or bump (convex Join) - parametric revolve ---
         a0 = CYL_DIA / 2.0
         d0 = DISH_DEPTH
         R0 = (a0 * a0 + d0 * d0) / (2.0 * d0)
-        cz = SKIRT_H + TAPER_H + CYL_H - d0 + R0     # sphere center z (mm)
+        if TOP_STYLE == "bump":
+            cz = SKIRT_H + TAPER_H + CYL_H + d0 - R0
+            cz_expr = "skirt_h + taper_h + cyl_h + dish_depth - dish_r"
+            top_op = adsk.fusion.FeatureOperations.JoinFeatureOperation
+        else:
+            cz = SKIRT_H + TAPER_H + CYL_H - d0 + R0
+            cz_expr = "skirt_h + taper_h + cyl_h - dish_depth + dish_r"
+            top_op = adsk.fusion.FeatureOperations.CutFeatureOperation
         sk_d = comp.sketches.add(comp.xZConstructionPlane)
-        sgn = 1.0 if sk_d.yDirection.z >= 0 else -1.0   # XZ plane local-Y -> world-Z sign
+        sgn = 1.0 if sk_d.yDirection.z >= 0 else -1.0
         Cv = sgn * cm(cz)
         C = adsk.core.Point3D.create(0, Cv, 0)
-        S = adsk.core.Point3D.create(0, Cv - cm(R0), 0)   # start directly below center (local)
+        S = adsk.core.Point3D.create(0, Cv - cm(R0), 0)
         arc = sk_d.sketchCurves.sketchArcs.addByCenterStartSweep(C, S, math.pi)
         ln = sk_d.sketchCurves.sketchLines.addByTwoPoints(
-            arc.startSketchPoint, arc.endSketchPoint)     # diameter, closes the profile
+            arc.startSketchPoint, arc.endSketchPoint)
         cons = sk_d.geometricConstraints
         axis_proj = sk_d.project(comp.zConstructionAxis)
         if axis_proj.count > 0:
@@ -226,54 +254,75 @@ def run(context):
             cons.addVertical(ln)
             rev_axis = ln
         dims = sk_d.sketchDimensions
-        rd = dims.addRadialDimension(
-            arc, adsk.core.Point3D.create(cm(R0 / 2.0), Cv, 0))
+        rd = dims.addRadialDimension(arc, adsk.core.Point3D.create(cm(R0 / 2.0), Cv, 0))
         rd.parameter.expression = "dish_r"
         hd = dims.addDistanceDimension(
             sk_d.originPoint, arc.centerSketchPoint,
             adsk.fusion.DimensionOrientations.VerticalDimensionOrientation,
             adsk.core.Point3D.create(cm(2.0), Cv, 0))
-        hd.parameter.expression = "skirt_h + taper_h + cyl_h - dish_depth + dish_r"
-        prof_d = sk_d.profiles.item(0)
-        rin = feats.revolveFeatures.createInput(
-            prof_d, rev_axis, adsk.fusion.FeatureOperations.CutFeatureOperation)
+        hd.parameter.expression = cz_expr
+        rin = feats.revolveFeatures.createInput(sk_d.profiles.item(0), rev_axis, top_op)
         rin.setAngleExtent(False, adsk.core.ValueInput.createByString("360 deg"))
-        rin.participantBodies = [comp.bRepBodies.itemByName("Keycap")]
+        rin.participantBodies = [cap_body()]
         feats.revolveFeatures.add(rin)
 
-        # --- 6. stem towers: start STEM_PROTRUDE below the bottom plane,
-        #        extrude up to the recessed ceiling, then join ---
-        cap = comp.bRepBodies.itemByName("Keycap")
-        plane_stem = plane_at(-STEM_PROTRUDE)
-        sk_stem = comp.sketches.add(plane_stem)
-        sk_stem.isComputeDeferred = True
-        add_rounded_rect(sk_stem, +STEM_PITCH / 2.0, 0, STEM_W, STEM_L, STEM_R)
-        add_rounded_rect(sk_stem, -STEM_PITCH / 2.0, 0, STEM_W, STEM_L, STEM_R)
-        sk_stem.isComputeDeferred = False
-        stem_profs = adsk.core.ObjectCollection.create()
-        for pr in sk_stem.profiles:
-            stem_profs.add(pr)
-        st_in = feats.extrudeFeatures.createInput(
-            stem_profs, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-        try:
-            to_def = adsk.fusion.ToEntityExtentDefinition.create(cap, False)
-            st_in.setOneSideExtent(
-                to_def, adsk.fusion.ExtentDirections.PositiveExtentDirection)
-        except:
-            st_in.setDistanceExtent(False, val(SKIRT_H + TAPER_H - WALL + STEM_PROTRUDE))
-        st_ext = feats.extrudeFeatures.add(st_in)
-        stem_tools = adsk.core.ObjectCollection.create()
-        for b in st_ext.bodies:
-            stem_tools.add(b)
-        jin = feats.combineFeatures.createInput(
-            comp.bRepBodies.itemByName("Keycap"), stem_tools)
-        jin.operation = adsk.fusion.FeatureOperations.JoinFeatureOperation
-        jin.isKeepToolBodies = False
-        feats.combineFeatures.add(jin)
+        # --- 6. stems grown from the recessed ceiling ---
+        fallback = val(SKIRT_H + TAPER_H - WALL + STEM_PROTRUDE)
 
-        ui.messageBox("Keycap_1u (v9) built.\n"
-                      "Dish is now a parametric revolve - follows skirt_h/taper_h/cyl_h/dish_depth.\n"
-                      "All heights live in Change Parameters.")
+        def grow_join(sketch):
+            profs = adsk.core.ObjectCollection.create()
+            for pr in sketch.profiles:
+                profs.add(pr)
+            gi = feats.extrudeFeatures.createInput(
+                profs, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+            try:
+                td = adsk.fusion.ToEntityExtentDefinition.create(cap_body(), False)
+                gi.setOneSideExtent(td, adsk.fusion.ExtentDirections.PositiveExtentDirection)
+            except:
+                gi.setDistanceExtent(False, fallback)
+            ge = feats.extrudeFeatures.add(gi)
+            tools = adsk.core.ObjectCollection.create()
+            for b in ge.bodies:
+                tools.add(b)
+            ji = feats.combineFeatures.createInput(cap_body(), tools)
+            ji.operation = adsk.fusion.FeatureOperations.JoinFeatureOperation
+            ji.isKeepToolBodies = False
+            feats.combineFeatures.add(ji)
+
+        plane_stem = plane_at(-STEM_PROTRUDE)
+
+        if STEM_TYPE == "mx":
+            # central cylindrical boss grown to ceiling
+            sk_boss = comp.sketches.add(plane_stem)
+            sk_boss.sketchCurves.sketchCircles.addByCenterRadius(p3(0, 0), cm(MX_STEM_DIA / 2.0))
+            grow_join(sk_boss)
+            # + cross cut from the stem bottom upward
+            sk_x = comp.sketches.add(plane_stem)
+            sk_x.isComputeDeferred = True
+            add_rounded_rect(sk_x, 0, 0, MX_CROSS_W1, MX_CROSS_LEN, 0)   # vertical arm
+            add_rounded_rect(sk_x, 0, 0, MX_CROSS_LEN, MX_CROSS_W2, 0)   # horizontal arm
+            sk_x.isComputeDeferred = False
+            xprofs = adsk.core.ObjectCollection.create()
+            for pr in sk_x.profiles:
+                xprofs.add(pr)
+            xi = feats.extrudeFeatures.createInput(
+                xprofs, adsk.fusion.FeatureOperations.CutFeatureOperation)
+            xi.setDistanceExtent(False, val(MX_CROSS_DEPTH))
+            feats.extrudeFeatures.add(xi)
+        else:
+            # choc: two solid towers
+            sk_stem = comp.sketches.add(plane_stem)
+            sk_stem.isComputeDeferred = True
+            add_rounded_rect(sk_stem, +CHOC_PITCH / 2.0, 0, CHOC_STEM_W, CHOC_STEM_L, STEM_R)
+            add_rounded_rect(sk_stem, -CHOC_PITCH / 2.0, 0, CHOC_STEM_W, CHOC_STEM_L, STEM_R)
+            sk_stem.isComputeDeferred = False
+            grow_join(sk_stem)
+
+        ui.messageBox(
+            "Keycap built (v10).\n"
+            "U={}  spacing={}  stem={}  top={}\n"
+            "Heights/dia/dish live in Change Parameters; re-run to change the choices.".format(
+                U, SPACING, STEM_TYPE, TOP_STYLE))
 
     except:
         if ui:
