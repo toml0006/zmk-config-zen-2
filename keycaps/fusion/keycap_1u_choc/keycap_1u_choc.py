@@ -1,4 +1,4 @@
-# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v8)
+# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v9)
 # KEA-like: vertical skirt (extrude up) -> tapered top (loft) -> SHELL the box ->
 # join SOLID raised cylinder -> PARAMETRIC dish (revolve cut, follows the params) ->
 # stems from the recessed ceiling, protruding STEM_PROTRUDE below the bottom plane.
@@ -201,38 +201,39 @@ def run(context):
         feats.extrudeFeatures.add(cin)
 
         # --- 5. PARAMETRIC spherical dish: revolve a semicircle, cut ---
-        # numeric current values for the initial sketch geometry
+        # Minimal driving constraints so the expressions actually drive it.
         a0 = CYL_DIA / 2.0
         d0 = DISH_DEPTH
         R0 = (a0 * a0 + d0 * d0) / (2.0 * d0)
-        Bz = SKIRT_H + TAPER_H + CYL_H - d0      # deepest dish point z (mm)
-        Tz = Bz + 2.0 * R0                       # top of the sphere (mm)
+        cz = SKIRT_H + TAPER_H + CYL_H - d0 + R0     # sphere center z (mm)
         sk_d = comp.sketches.add(comp.xZConstructionPlane)
-        sgn = 1.0 if sk_d.yDirection.z >= 0 else -1.0   # XZ plane Y->Z sign
-        B = adsk.core.Point3D.create(0, sgn * cm(Bz), 0)
-        T = adsk.core.Point3D.create(0, sgn * cm(Tz), 0)
-        Rp = adsk.core.Point3D.create(cm(R0), sgn * cm(Bz + R0), 0)
-        ln = sk_d.sketchCurves.sketchLines.addByTwoPoints(B, T)   # diameter on axis
-        arc = sk_d.sketchCurves.sketchArcs.addByThreePoints(B, Rp, T)
-        # pin the diameter line to the Z axis (u = 0) and revolve about it
-        axis_proj = sk_d.project(comp.zConstructionAxis)
+        sgn = 1.0 if sk_d.yDirection.z >= 0 else -1.0   # XZ plane local-Y -> world-Z sign
+        Cv = sgn * cm(cz)
+        C = adsk.core.Point3D.create(0, Cv, 0)
+        S = adsk.core.Point3D.create(0, Cv - cm(R0), 0)   # start directly below center (local)
+        arc = sk_d.sketchCurves.sketchArcs.addByCenterStartSweep(C, S, math.pi)
+        ln = sk_d.sketchCurves.sketchLines.addByTwoPoints(
+            arc.startSketchPoint, arc.endSketchPoint)     # diameter, closes the profile
         cons = sk_d.geometricConstraints
+        axis_proj = sk_d.project(comp.zConstructionAxis)
         if axis_proj.count > 0:
             axisline = axis_proj.item(0)
-            cons.addCoincident(ln.startSketchPoint, axisline)
-            cons.addCoincident(ln.endSketchPoint, axisline)
+            cons.addCoincident(arc.centerSketchPoint, axisline)
+            cons.addCoincident(arc.startSketchPoint, axisline)
+            cons.addCoincident(arc.endSketchPoint, axisline)
             rev_axis = axisline
         else:
             cons.addVertical(ln)
             rev_axis = ln
         dims = sk_d.sketchDimensions
-        rd = dims.addRadialDimension(arc, Rp)
+        rd = dims.addRadialDimension(
+            arc, adsk.core.Point3D.create(cm(R0 / 2.0), Cv, 0))
         rd.parameter.expression = "dish_r"
         hd = dims.addDistanceDimension(
-            sk_d.originPoint, ln.startSketchPoint,
+            sk_d.originPoint, arc.centerSketchPoint,
             adsk.fusion.DimensionOrientations.VerticalDimensionOrientation,
-            adsk.core.Point3D.create(cm(2.0), sgn * cm(Bz), 0))
-        hd.parameter.expression = "skirt_h + taper_h + cyl_h - dish_depth"
+            adsk.core.Point3D.create(cm(2.0), Cv, 0))
+        hd.parameter.expression = "skirt_h + taper_h + cyl_h - dish_depth + dish_r"
         prof_d = sk_d.profiles.item(0)
         rin = feats.revolveFeatures.createInput(
             prof_d, rev_axis, adsk.fusion.FeatureOperations.CutFeatureOperation)
@@ -270,7 +271,7 @@ def run(context):
         jin.isKeepToolBodies = False
         feats.combineFeatures.add(jin)
 
-        ui.messageBox("Keycap_1u (v8) built.\n"
+        ui.messageBox("Keycap_1u (v9) built.\n"
                       "Dish is now a parametric revolve - follows skirt_h/taper_h/cyl_h/dish_depth.\n"
                       "All heights live in Change Parameters.")
 
