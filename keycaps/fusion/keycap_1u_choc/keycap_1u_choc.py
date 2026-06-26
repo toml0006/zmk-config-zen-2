@@ -1,4 +1,4 @@
-# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v6)
+# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v7)
 # KEA-like: vertical skirt (extrude up) -> tapered top (loft) -> SHELL the box ->
 # join SOLID raised cylinder -> dish its top. Stems grow from the recessed ceiling.
 # The cylinder is NOT shelled. Stems protrude STEM_PROTRUDE below the bottom plane.
@@ -114,6 +114,8 @@ def run(context):
         ensure_param(design, "cyl_dia", "{} mm".format(CYL_DIA), "mm", "raised cylinder diameter")
         ensure_param(design, "cyl_h", "{} mm".format(CYL_H), "mm", "raised cylinder height")
         ensure_param(design, "dish_depth", "{} mm".format(DISH_DEPTH), "mm", "dish depth (re-run to refresh)")
+        ensure_param(design, "skirt_h", "{} mm".format(SKIRT_H), "mm", "vertical skirt height")
+        ensure_param(design, "taper_h", "{} mm".format(TAPER_H), "mm", "lofted taper offset height (LIVE)")
 
         for occ in list(root.occurrences):
             if occ.component.name == COMP_NAME:
@@ -130,6 +132,12 @@ def run(context):
             pin.setByOffset(comp.xYConstructionPlane, val(z_mm))
             return planes.add(pin)
 
+        def plane_expr(expr):
+            pin = planes.createInput()
+            pin.setByOffset(comp.xYConstructionPlane,
+                            adsk.core.ValueInput.createByString(expr))
+            return planes.add(pin)
+
         # --- 1. base profile + vertical skirt extrude ---
         sk_base = comp.sketches.add(comp.xYConstructionPlane)
         sk_base.isComputeDeferred = True
@@ -138,19 +146,19 @@ def run(context):
         ein = feats.extrudeFeatures.createInput(
             sk_base.profiles.item(0),
             adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-        ein.setDistanceExtent(False, val(SKIRT_H))
+        ein.setDistanceExtent(False, adsk.core.ValueInput.createByString("skirt_h"))
         ext = feats.extrudeFeatures.add(ein)
         body = ext.bodies.item(0)
         body.name = "Keycap"
 
         # --- 2. loft taper from skirt top to smaller top ---
-        plane_skirt = plane_at(SKIRT_H)
+        plane_skirt = plane_expr("skirt_h")
         sk_st = comp.sketches.add(plane_skirt)
         sk_st.isComputeDeferred = True
         add_rounded_rect(sk_st, 0, 0, BASE_X, BASE_Y, CORNER_R)
         sk_st.isComputeDeferred = False
 
-        plane_top = plane_at(SKIRT_H + TAPER_H)
+        plane_top = plane_expr("skirt_h + taper_h")
         sk_top = comp.sketches.add(plane_top)
         sk_top.isComputeDeferred = True
         add_rounded_rect(sk_top, 0, 0, TOP_X, TOP_Y, CORNER_R)
@@ -193,7 +201,9 @@ def run(context):
         d = design.userParameters.itemByName("dish_depth").value      # cm
         ch = design.userParameters.itemByName("cyl_h").value          # cm
         R = (a * a + d * d) / (2.0 * d)
-        top_z = cm(SKIRT_H + TAPER_H) + ch
+        skh = design.userParameters.itemByName("skirt_h").value   # cm
+        tph = design.userParameters.itemByName("taper_h").value   # cm
+        top_z = skh + tph + ch
         center_z = top_z - d + R
         tmp = adsk.fusion.TemporaryBRepManager.get()
         sphere = tmp.createSphere(adsk.core.Point3D.create(0, 0, center_z), R)
@@ -229,7 +239,7 @@ def run(context):
             st_in.setOneSideExtent(
                 to_def, adsk.fusion.ExtentDirections.PositiveExtentDirection)
         except:
-            st_in.setDistanceExtent(False, val(SKIRT_H + TAPER_H - WALL + STEM_PROTRUDE))
+            st_in.setDistanceExtent(False, val((skh + tph) * 10.0 - WALL + STEM_PROTRUDE))
         st_ext = feats.extrudeFeatures.add(st_in)
         stem_tools = adsk.core.ObjectCollection.create()
         for b in st_ext.bodies:
@@ -240,7 +250,7 @@ def run(context):
         jin.isKeepToolBodies = False
         feats.combineFeatures.add(jin)
 
-        ui.messageBox("Keycap_1u (v6) built.\n"
+        ui.messageBox("Keycap_1u (v7) built.\n"
                       "Box shelled; cylinder solid; stems protrude 1.4mm below bottom.\n"
                       "cyl_dia / cyl_h live in Change Parameters; re-run to refresh dish.")
 
