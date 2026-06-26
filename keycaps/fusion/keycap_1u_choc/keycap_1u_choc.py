@@ -1,12 +1,11 @@
-# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v4)
-# KEA-like: vertical skirt (extrude up) -> tapered top (loft) -> raised dished cylinder.
-# SHELLED underside (hollow). Two solid Choc stem towers grown from the recessed
-# inner ceiling down to the bottom opening (5.7mm pitch).
+# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v5)
+# KEA-like: vertical skirt (extrude up) -> tapered top (loft) -> SHELL the box ->
+# join SOLID raised cylinder -> dish its top. Stems grow from the recessed ceiling.
+# The cylinder is NOT shelled (shell happens before it is added).
 #
 # LIVE PARAMETERS: cyl_dia, cyl_h, dish_depth are Fusion User Parameters
 #   (Modify > Change Parameters). cyl_dia & cyl_h drive the cylinder live.
-#   The dish is a static boolean - re-run the script to refresh it after changing
-#   cyl size.
+#   Dish is a static boolean - re-run to refresh after changing cyl size.
 #
 # HOW TO RUN: Utilities > ADD-INS > Scripts and Add-Ins (Shift+S) > Scripts >
 #   point at this folder > Run. Re-run after editing the block below.
@@ -28,7 +27,7 @@ CYL_DIA       = 13.0   # raised cylinder diameter  -> LIVE user param "cyl_dia"
 CYL_H         = 1.5    # raised cylinder height     -> LIVE user param "cyl_h"
 DISH_DEPTH    = 0.8    # spherical dish depth        -> user param "dish_depth"
 
-WALL          = 1.2    # shell wall thickness (hollow underside)
+WALL          = 1.2    # shell wall thickness (hollow underside; box only)
 
 STEM_W        = 1.2    # stem tower width  (X)  -- Choc nominal
 STEM_L        = 3.0    # stem tower length (Y)  -- Choc nominal
@@ -88,12 +87,11 @@ def ensure_param(design, name, expr, unit, comment):
 
 
 def lowest_horizontal_face(body):
-    """Return the lowest (min-z) horizontal planar face = the bottom face."""
     best = None
     best_z = 1e9
     for f in body.faces:
         bb = f.boundingBox
-        if abs(bb.maxPoint.z - bb.minPoint.z) < 1e-5:   # horizontal
+        if abs(bb.maxPoint.z - bb.minPoint.z) < 1e-5:
             if bb.minPoint.z < best_z:
                 best_z = bb.minPoint.z
                 best = f
@@ -164,7 +162,16 @@ def run(context):
         lin.isSolid = True
         feats.loftFeatures.add(lin)
 
-        # --- 3. raised cylinder (LIVE: driven by cyl_dia / cyl_h) ---
+        # --- 3. shell the BOX (remove bottom face) -- before the cylinder ---
+        cap = comp.bRepBodies.itemByName("Keycap")
+        bottom = lowest_horizontal_face(cap)
+        faces = adsk.core.ObjectCollection.create()
+        faces.add(bottom)
+        sh_in = feats.shellFeatures.createInput(faces, False)
+        sh_in.insideThickness = val(WALL)
+        feats.shellFeatures.add(sh_in)
+
+        # --- 4. raised SOLID cylinder (LIVE: cyl_dia / cyl_h), joined on top ---
         sk_cyl = comp.sketches.add(plane_top)
         circ = sk_cyl.sketchCurves.sketchCircles.addByCenterRadius(
             p3(0, 0), cm(CYL_DIA / 2.0))
@@ -180,7 +187,7 @@ def run(context):
         cin.setDistanceExtent(False, adsk.core.ValueInput.createByString("cyl_h"))
         feats.extrudeFeatures.add(cin)
 
-        # --- 4. spherical dish cut (static; uses current param values) ---
+        # --- 5. spherical dish cut into the solid cylinder ---
         a = design.userParameters.itemByName("cyl_dia").value / 2.0   # cm
         d = design.userParameters.itemByName("dish_depth").value      # cm
         ch = design.userParameters.itemByName("cyl_h").value          # cm
@@ -202,15 +209,6 @@ def run(context):
         combin.isKeepToolBodies = False
         feats.combineFeatures.add(combin)
 
-        # --- 5. shell the underside (remove bottom face) ---
-        cap = comp.bRepBodies.itemByName("Keycap")
-        bottom = lowest_horizontal_face(cap)
-        faces = adsk.core.ObjectCollection.create()
-        faces.add(bottom)
-        sh_in = feats.shellFeatures.createInput(faces, False)
-        sh_in.insideThickness = val(WALL)
-        feats.shellFeatures.add(sh_in)
-
         # --- 6. stem towers grown from the recessed ceiling, joined ---
         cap = comp.bRepBodies.itemByName("Keycap")
         sk_stem = comp.sketches.add(comp.xYConstructionPlane)
@@ -228,7 +226,7 @@ def run(context):
             st_in.setOneSideExtent(
                 to_def, adsk.fusion.ExtentDirections.PositiveExtentDirection)
         except:
-            st_in.setDistanceExtent(False, val(SKIRT_H + TAPER_H + 1.0))
+            st_in.setDistanceExtent(False, val(SKIRT_H + TAPER_H - WALL))
         st_ext = feats.extrudeFeatures.add(st_in)
         stem_tools = adsk.core.ObjectCollection.create()
         for b in st_ext.bodies:
@@ -239,8 +237,8 @@ def run(context):
         jin.isKeepToolBodies = False
         feats.combineFeatures.add(jin)
 
-        ui.messageBox("Keycap_1u (v4) built.\n"
-                      "Shelled underside + stems from the recessed ceiling.\n"
+        ui.messageBox("Keycap_1u (v5) built.\n"
+                      "Box shelled; cylinder solid; stems from the recessed ceiling.\n"
                       "cyl_dia / cyl_h live in Change Parameters; re-run to refresh dish.")
 
     except:
