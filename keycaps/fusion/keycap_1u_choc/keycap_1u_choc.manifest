@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "Jackson Tomlinson",
+    "description": {
+        "": "Parametric 1u Choc-spaced keycap: tapered solid body, raised dished cylinder, Choc twin-slot stem."
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
