@@ -1,11 +1,11 @@
-# Choc v1 keycap, 1u, Choc-spaced — parametric rebuild (v2)
+# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v3)
 # KEA-like: vertical skirt (extrude up) -> tapered top (loft) -> raised dished cylinder.
-# SOLID body. Two protruding Choc stems (boss + 1.2x3.0 slot, 5.7mm pitch).
+# SOLID body. Two SOLID Choc stem towers extruded downward (5.7mm pitch).
 #
 # LIVE PARAMETERS: cyl_dia, cyl_h, dish_depth are created as Fusion User Parameters
-#   (Modify > Change Parameters). cyl_dia & cyl_h drive the cylinder live — edit them
+#   (Modify > Change Parameters). cyl_dia & cyl_h drive the cylinder live - edit them
 #   in that dialog and the model updates. Changing them there does NOT re-cut the dish
-#   (it's a static boolean) — re-run the script to refresh the dish to a new cyl size.
+#   (it's a static boolean) - re-run the script to refresh the dish to a new cyl size.
 #
 # HOW TO RUN: Utilities > ADD-INS > Scripts and Add-Ins (Shift+S) > Scripts >
 #   point at this folder > Run. Re-run after editing the block below. Each run
@@ -28,14 +28,11 @@ CYL_DIA       = 13.0   # raised cylinder diameter  -> LIVE user param "cyl_dia"
 CYL_H         = 1.5    # raised cylinder height     -> LIVE user param "cyl_h"
 DISH_DEPTH    = 0.8    # spherical dish depth        -> user param "dish_depth"
 
-STEM_OUTER_W  = 2.4    # stem boss width  (X)
-STEM_OUTER_L  = 4.2    # stem boss length (Y)
-STEM_SLOT_W   = 1.2    # Choc slot width  (X)
-STEM_SLOT_L   = 3.0    # Choc slot length (Y)
-STEM_PITCH    = 5.7    # slot/stem center-to-center (X)
-STEM_PROTRUDE = 2.5    # stem boss length below bottom face
-STEM_SLOT_UP  = 3.0    # slot depth cut up into body above bottom face
-STEM_R        = 0.3    # slot corner radius
+STEM_W        = 1.2    # stem tower width  (X)  -- Choc nominal
+STEM_L        = 3.0    # stem tower length (Y)  -- Choc nominal
+STEM_PITCH    = 5.7    # stem center-to-center (X)
+STEM_H        = 3.0    # stem tower height below bottom face
+STEM_R        = 0.3    # stem corner radius
 
 COMP_NAME     = "Keycap_1u"
 # =========================================================================
@@ -193,36 +190,22 @@ def run(context):
         combin.isKeepToolBodies = False
         feats.combineFeatures.add(combin)
 
-        # --- 5. protruding Choc stems (boss extruded down, join) ---
-        sk_boss = comp.sketches.add(comp.xYConstructionPlane)
-        sk_boss.isComputeDeferred = True
-        add_rounded_rect(sk_boss, +STEM_PITCH / 2.0, 0, STEM_OUTER_W, STEM_OUTER_L, STEM_R)
-        add_rounded_rect(sk_boss, -STEM_PITCH / 2.0, 0, STEM_OUTER_W, STEM_OUTER_L, STEM_R)
-        sk_boss.isComputeDeferred = False
-        boss_profs = adsk.core.ObjectCollection.create()
-        for pr in sk_boss.profiles:
-            boss_profs.add(pr)
-        bin_ = feats.extrudeFeatures.createInput(
-            boss_profs, adsk.fusion.FeatureOperations.JoinFeatureOperation)
-        bin_.setDistanceExtent(False, val(-STEM_PROTRUDE))   # downward
-        feats.extrudeFeatures.add(bin_)
-
-        # --- 6. Choc slots cut through stems + up into body ---
-        sk_slot = comp.sketches.add(comp.xYConstructionPlane)
-        sk_slot.isComputeDeferred = True
-        add_rounded_rect(sk_slot, +STEM_PITCH / 2.0, 0, STEM_SLOT_W, STEM_SLOT_L, STEM_R)
-        add_rounded_rect(sk_slot, -STEM_PITCH / 2.0, 0, STEM_SLOT_W, STEM_SLOT_L, STEM_R)
-        sk_slot.isComputeDeferred = False
-        slot_profs = adsk.core.ObjectCollection.create()
-        for pr in sk_slot.profiles:
-            slot_profs.add(pr)
+        # --- 5. SOLID Choc stem towers (extruded down, join) ---
+        sk_stem = comp.sketches.add(comp.xYConstructionPlane)
+        sk_stem.isComputeDeferred = True
+        add_rounded_rect(sk_stem, +STEM_PITCH / 2.0, 0, STEM_W, STEM_L, STEM_R)
+        add_rounded_rect(sk_stem, -STEM_PITCH / 2.0, 0, STEM_W, STEM_L, STEM_R)
+        sk_stem.isComputeDeferred = False
+        stem_profs = adsk.core.ObjectCollection.create()
+        for pr in sk_stem.profiles:
+            stem_profs.add(pr)
         sin = feats.extrudeFeatures.createInput(
-            slot_profs, adsk.fusion.FeatureOperations.CutFeatureOperation)
-        # two-sided: up into the body, down through the boss
-        sin.setTwoSidesDistanceExtent(val(STEM_SLOT_UP), val(STEM_PROTRUDE + 0.2))
+            stem_profs, adsk.fusion.FeatureOperations.JoinFeatureOperation)
+        sin.setDistanceExtent(False, val(-STEM_H))   # downward, solid towers
         feats.extrudeFeatures.add(sin)
 
-        ui.messageBox("Keycap_1u (v2) built.\n"
+        ui.messageBox("Keycap_1u (v3) built.\n"
+                      "Solid stem towers added.\n"
                       "cyl_dia / cyl_h are live in Change Parameters.\n"
                       "Re-run after editing this file or to refresh the dish.")
 
