@@ -1,11 +1,11 @@
-# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v7)
+# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v8)
 # KEA-like: vertical skirt (extrude up) -> tapered top (loft) -> SHELL the box ->
-# join SOLID raised cylinder -> dish its top. Stems grow from the recessed ceiling.
-# The cylinder is NOT shelled. Stems protrude STEM_PROTRUDE below the bottom plane.
+# join SOLID raised cylinder -> PARAMETRIC dish (revolve cut, follows the params) ->
+# stems from the recessed ceiling, protruding STEM_PROTRUDE below the bottom plane.
 #
-# LIVE PARAMETERS: cyl_dia, cyl_h, dish_depth are Fusion User Parameters
-#   (Modify > Change Parameters). cyl_dia & cyl_h drive the cylinder live.
-#   Dish is a static boolean - re-run to refresh after changing cyl size.
+# LIVE PARAMETERS (Modify > Change Parameters): skirt_h, taper_h, cyl_dia, cyl_h,
+#   dish_depth. The dish is now a REVOLVE bound to these, so changing taper_h /
+#   cyl_h / cyl_dia / dish_depth keeps the dish attached - no re-run needed for it.
 #
 # HOW TO RUN: Utilities > ADD-INS > Scripts and Add-Ins (Shift+S) > Scripts >
 #   point at this folder > Run. Re-run after editing the block below.
@@ -19,13 +19,13 @@ BASE_X        = 17.5   # bottom footprint X (Choc-spaced 1u)
 BASE_Y        = 16.5   # bottom footprint Y
 TOP_X         = 15.5   # top footprint X (taper target)
 TOP_Y         = 14.6   # top footprint Y
-SKIRT_H       = 2.5    # vertical skirt height (straight extrude up)
-TAPER_H       = 2.0    # loft height above skirt (taper to top)
+SKIRT_H       = 2.5    # vertical skirt height       -> LIVE param "skirt_h"
+TAPER_H       = 2.0    # lofted taper offset height  -> LIVE param "taper_h"
 CORNER_R      = 1.5    # cap corner radius
 
-CYL_DIA       = 13.0   # raised cylinder diameter  -> LIVE user param "cyl_dia"
-CYL_H         = 1.5    # raised cylinder height     -> LIVE user param "cyl_h"
-DISH_DEPTH    = 0.8    # spherical dish depth        -> user param "dish_depth"
+CYL_DIA       = 13.0   # raised cylinder diameter    -> LIVE param "cyl_dia"
+CYL_H         = 1.5    # raised cylinder height       -> LIVE param "cyl_h"
+DISH_DEPTH    = 0.8    # spherical dish depth         -> LIVE param "dish_depth"
 
 WALL          = 1.2    # shell wall thickness (hollow underside; box only)
 
@@ -111,11 +111,15 @@ def run(context):
         design.designType = adsk.fusion.DesignTypes.ParametricDesignType
         root = design.rootComponent
 
-        ensure_param(design, "cyl_dia", "{} mm".format(CYL_DIA), "mm", "raised cylinder diameter")
-        ensure_param(design, "cyl_h", "{} mm".format(CYL_H), "mm", "raised cylinder height")
-        ensure_param(design, "dish_depth", "{} mm".format(DISH_DEPTH), "mm", "dish depth (re-run to refresh)")
         ensure_param(design, "skirt_h", "{} mm".format(SKIRT_H), "mm", "vertical skirt height")
         ensure_param(design, "taper_h", "{} mm".format(TAPER_H), "mm", "lofted taper offset height (LIVE)")
+        ensure_param(design, "cyl_dia", "{} mm".format(CYL_DIA), "mm", "raised cylinder diameter")
+        ensure_param(design, "cyl_h", "{} mm".format(CYL_H), "mm", "raised cylinder height")
+        ensure_param(design, "dish_depth", "{} mm".format(DISH_DEPTH), "mm", "dish depth")
+        # spherical dish radius derived from cyl_dia + dish_depth (kept live)
+        ensure_param(design, "dish_r",
+                     "(((cyl_dia / 2) * (cyl_dia / 2)) + (dish_depth * dish_depth)) / (2 * dish_depth)",
+                     "mm", "derived dish sphere radius")
 
         for occ in list(root.occurrences):
             if occ.component.name == COMP_NAME:
@@ -196,29 +200,45 @@ def run(context):
         cin.setDistanceExtent(False, adsk.core.ValueInput.createByString("cyl_h"))
         feats.extrudeFeatures.add(cin)
 
-        # --- 5. spherical dish cut into the solid cylinder ---
-        a = design.userParameters.itemByName("cyl_dia").value / 2.0   # cm
-        d = design.userParameters.itemByName("dish_depth").value      # cm
-        ch = design.userParameters.itemByName("cyl_h").value          # cm
-        R = (a * a + d * d) / (2.0 * d)
-        skh = design.userParameters.itemByName("skirt_h").value   # cm
-        tph = design.userParameters.itemByName("taper_h").value   # cm
-        top_z = skh + tph + ch
-        center_z = top_z - d + R
-        tmp = adsk.fusion.TemporaryBRepManager.get()
-        sphere = tmp.createSphere(adsk.core.Point3D.create(0, 0, center_z), R)
-        bf = comp.features.baseFeatures.add()
-        bf.startEdit()
-        sph = comp.bRepBodies.add(sphere, bf)
-        sph.name = "dish_tool"
-        bf.finishEdit()
-        tools = adsk.core.ObjectCollection.create()
-        tools.add(comp.bRepBodies.itemByName("dish_tool"))
-        combin = feats.combineFeatures.createInput(
-            comp.bRepBodies.itemByName("Keycap"), tools)
-        combin.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
-        combin.isKeepToolBodies = False
-        feats.combineFeatures.add(combin)
+        # --- 5. PARAMETRIC spherical dish: revolve a semicircle, cut ---
+        # numeric current values for the initial sketch geometry
+        a0 = CYL_DIA / 2.0
+        d0 = DISH_DEPTH
+        R0 = (a0 * a0 + d0 * d0) / (2.0 * d0)
+        Bz = SKIRT_H + TAPER_H + CYL_H - d0      # deepest dish point z (mm)
+        Tz = Bz + 2.0 * R0                       # top of the sphere (mm)
+        sk_d = comp.sketches.add(comp.xZConstructionPlane)
+        sgn = 1.0 if sk_d.yDirection.z >= 0 else -1.0   # XZ plane Y->Z sign
+        B = adsk.core.Point3D.create(0, sgn * cm(Bz), 0)
+        T = adsk.core.Point3D.create(0, sgn * cm(Tz), 0)
+        Rp = adsk.core.Point3D.create(cm(R0), sgn * cm(Bz + R0), 0)
+        ln = sk_d.sketchCurves.sketchLines.addByTwoPoints(B, T)   # diameter on axis
+        arc = sk_d.sketchCurves.sketchArcs.addByThreePoints(B, Rp, T)
+        # pin the diameter line to the Z axis (u = 0) and revolve about it
+        axis_proj = sk_d.project(comp.zConstructionAxis)
+        cons = sk_d.geometricConstraints
+        if axis_proj.count > 0:
+            axisline = axis_proj.item(0)
+            cons.addCoincident(ln.startSketchPoint, axisline)
+            cons.addCoincident(ln.endSketchPoint, axisline)
+            rev_axis = axisline
+        else:
+            cons.addVertical(ln)
+            rev_axis = ln
+        dims = sk_d.sketchDimensions
+        rd = dims.addRadialDimension(arc, Rp)
+        rd.parameter.expression = "dish_r"
+        hd = dims.addDistanceDimension(
+            sk_d.originPoint, ln.startSketchPoint,
+            adsk.fusion.DimensionOrientations.VerticalDimensionOrientation,
+            adsk.core.Point3D.create(cm(2.0), sgn * cm(Bz), 0))
+        hd.parameter.expression = "skirt_h + taper_h + cyl_h - dish_depth"
+        prof_d = sk_d.profiles.item(0)
+        rin = feats.revolveFeatures.createInput(
+            prof_d, rev_axis, adsk.fusion.FeatureOperations.CutFeatureOperation)
+        rin.setAngleExtent(False, adsk.core.ValueInput.createByString("360 deg"))
+        rin.participantBodies = [comp.bRepBodies.itemByName("Keycap")]
+        feats.revolveFeatures.add(rin)
 
         # --- 6. stem towers: start STEM_PROTRUDE below the bottom plane,
         #        extrude up to the recessed ceiling, then join ---
@@ -239,7 +259,7 @@ def run(context):
             st_in.setOneSideExtent(
                 to_def, adsk.fusion.ExtentDirections.PositiveExtentDirection)
         except:
-            st_in.setDistanceExtent(False, val((skh + tph) * 10.0 - WALL + STEM_PROTRUDE))
+            st_in.setDistanceExtent(False, val(SKIRT_H + TAPER_H - WALL + STEM_PROTRUDE))
         st_ext = feats.extrudeFeatures.add(st_in)
         stem_tools = adsk.core.ObjectCollection.create()
         for b in st_ext.bodies:
@@ -250,9 +270,9 @@ def run(context):
         jin.isKeepToolBodies = False
         feats.combineFeatures.add(jin)
 
-        ui.messageBox("Keycap_1u (v7) built.\n"
-                      "Box shelled; cylinder solid; stems protrude 1.4mm below bottom.\n"
-                      "cyl_dia / cyl_h live in Change Parameters; re-run to refresh dish.")
+        ui.messageBox("Keycap_1u (v8) built.\n"
+                      "Dish is now a parametric revolve - follows skirt_h/taper_h/cyl_h/dish_depth.\n"
+                      "All heights live in Change Parameters.")
 
     except:
         if ui:
