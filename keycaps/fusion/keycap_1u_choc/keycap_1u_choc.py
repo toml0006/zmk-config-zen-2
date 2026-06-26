@@ -1,7 +1,7 @@
-# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v5)
+# Choc v1 keycap, 1u, Choc-spaced - parametric rebuild (v6)
 # KEA-like: vertical skirt (extrude up) -> tapered top (loft) -> SHELL the box ->
 # join SOLID raised cylinder -> dish its top. Stems grow from the recessed ceiling.
-# The cylinder is NOT shelled (shell happens before it is added).
+# The cylinder is NOT shelled. Stems protrude STEM_PROTRUDE below the bottom plane.
 #
 # LIVE PARAMETERS: cyl_dia, cyl_h, dish_depth are Fusion User Parameters
 #   (Modify > Change Parameters). cyl_dia & cyl_h drive the cylinder live.
@@ -32,6 +32,7 @@ WALL          = 1.2    # shell wall thickness (hollow underside; box only)
 STEM_W        = 1.2    # stem tower width  (X)  -- Choc nominal
 STEM_L        = 3.0    # stem tower length (Y)  -- Choc nominal
 STEM_PITCH    = 5.7    # stem center-to-center (X)
+STEM_PROTRUDE = 1.4    # how far stems extend BELOW the cap bottom plane
 STEM_R        = 0.3    # stem corner radius
 
 COMP_NAME     = "Keycap_1u"
@@ -209,9 +210,11 @@ def run(context):
         combin.isKeepToolBodies = False
         feats.combineFeatures.add(combin)
 
-        # --- 6. stem towers grown from the recessed ceiling, joined ---
+        # --- 6. stem towers: start STEM_PROTRUDE below the bottom plane,
+        #        extrude up to the recessed ceiling, then join ---
         cap = comp.bRepBodies.itemByName("Keycap")
-        sk_stem = comp.sketches.add(comp.xYConstructionPlane)
+        plane_stem = plane_at(-STEM_PROTRUDE)
+        sk_stem = comp.sketches.add(plane_stem)
         sk_stem.isComputeDeferred = True
         add_rounded_rect(sk_stem, +STEM_PITCH / 2.0, 0, STEM_W, STEM_L, STEM_R)
         add_rounded_rect(sk_stem, -STEM_PITCH / 2.0, 0, STEM_W, STEM_L, STEM_R)
@@ -226,7 +229,7 @@ def run(context):
             st_in.setOneSideExtent(
                 to_def, adsk.fusion.ExtentDirections.PositiveExtentDirection)
         except:
-            st_in.setDistanceExtent(False, val(SKIRT_H + TAPER_H - WALL))
+            st_in.setDistanceExtent(False, val(SKIRT_H + TAPER_H - WALL + STEM_PROTRUDE))
         st_ext = feats.extrudeFeatures.add(st_in)
         stem_tools = adsk.core.ObjectCollection.create()
         for b in st_ext.bodies:
@@ -237,8 +240,8 @@ def run(context):
         jin.isKeepToolBodies = False
         feats.combineFeatures.add(jin)
 
-        ui.messageBox("Keycap_1u (v5) built.\n"
-                      "Box shelled; cylinder solid; stems from the recessed ceiling.\n"
+        ui.messageBox("Keycap_1u (v6) built.\n"
+                      "Box shelled; cylinder solid; stems protrude 1.4mm below bottom.\n"
                       "cyl_dia / cyl_h live in Change Parameters; re-run to refresh dish.")
 
     except:
