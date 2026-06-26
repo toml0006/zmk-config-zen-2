@@ -1,44 +1,43 @@
-# Choc v1 keycap, 1u, Choc-spaced — parametric rebuild
-# KEA-like tapered body, SOLID, with a raised cylinder on top whose face is dished.
+# Choc v1 keycap, 1u, Choc-spaced — parametric rebuild (v2)
+# KEA-like: vertical skirt (extrude up) -> tapered top (loft) -> raised dished cylinder.
+# SOLID body. Two protruding Choc stems (boss + 1.2x3.0 slot, 5.7mm pitch).
 #
-# HOW TO RUN (Fusion 360):
-#   Utilities tab > ADD-INS > Scripts and Add-Ins (Shift+S)
-#   > Scripts > green "+" > pick this file's folder > Run.
-#   Re-run after editing the PARAMETERS block below. Each run makes a new
-#   component "Keycap_1u"; prior ones with that name are auto-deleted.
+# LIVE PARAMETERS: cyl_dia, cyl_h, dish_depth are created as Fusion User Parameters
+#   (Modify > Change Parameters). cyl_dia & cyl_h drive the cylinder live — edit them
+#   in that dialog and the model updates. Changing them there does NOT re-cut the dish
+#   (it's a static boolean) — re-run the script to refresh the dish to a new cyl size.
 #
-# Geometry notes:
-#   - Stem = two Choc twin slots (5.7mm pitch, 1.2x3.0mm, r0.3), cut up from bottom.
-#   - Optional underside RELIEF pocket clears the switch housing top (set depth 0 to disable).
-#   - Cap corners + slot corners rounded via rounded-rect sketches (no fragile edge fillets).
-#   - Units in this file are MILLIMETERS; converted to Fusion's internal cm on use.
+# HOW TO RUN: Utilities > ADD-INS > Scripts and Add-Ins (Shift+S) > Scripts >
+#   point at this folder > Run. Re-run after editing the block below. Each run
+#   rebuilds component "Keycap_1u".
+#
+# Units in this file are MILLIMETERS (converted to Fusion's internal cm on use).
 
 import adsk.core, adsk.fusion, traceback, math
 
 # ============================ PARAMETERS (mm) ============================
-BASE_X       = 17.5   # bottom footprint X (Choc-spaced 1u; 18mm grid - 0.5 gap)
-BASE_Y       = 16.5   # bottom footprint Y (17mm grid - 0.5 gap)
-TOP_X        = 15.5   # top-of-body footprint X (taper in)
-TOP_Y        = 14.6   # top-of-body footprint Y
-BODY_H       = 5.0    # height of tapered body (bottom face -> cap top shoulder)
-CORNER_R     = 1.2    # cap corner radius
+BASE_X        = 17.5   # bottom footprint X (Choc-spaced 1u)
+BASE_Y        = 16.5   # bottom footprint Y
+TOP_X         = 15.5   # top footprint X (taper target)
+TOP_Y         = 14.6   # top footprint Y
+SKIRT_H       = 2.5    # vertical skirt height (straight extrude up)
+TAPER_H       = 2.0    # loft height above skirt (taper to top)
+CORNER_R      = 1.5    # cap corner radius
 
-CYL_DIA      = 14.0   # raised cylinder diameter (PARAMETRIC — start "wide")
-CYL_H        = 2.0    # raised cylinder height (PARAMETRIC — try 1..3)
-DISH_DEPTH   = 1.2    # spherical dish depth at center of the cylinder face
+CYL_DIA       = 13.0   # raised cylinder diameter  -> LIVE user param "cyl_dia"
+CYL_H         = 1.5    # raised cylinder height     -> LIVE user param "cyl_h"
+DISH_DEPTH    = 0.8    # spherical dish depth        -> user param "dish_depth"
 
-STEM_SLOT_W  = 1.2    # Choc slot width  (along X)
-STEM_SLOT_L  = 3.0    # Choc slot length (along Y)
-STEM_PITCH   = 5.7    # slot center-to-center (along X)
-STEM_DEPTH   = 3.0    # slot depth, cut up from bottom face
-STEM_R       = 0.3    # slot corner radius
+STEM_OUTER_W  = 2.4    # stem boss width  (X)
+STEM_OUTER_L  = 4.2    # stem boss length (Y)
+STEM_SLOT_W   = 1.2    # Choc slot width  (X)
+STEM_SLOT_L   = 3.0    # Choc slot length (Y)
+STEM_PITCH    = 5.7    # slot/stem center-to-center (X)
+STEM_PROTRUDE = 2.5    # stem boss length below bottom face
+STEM_SLOT_UP  = 3.0    # slot depth cut up into body above bottom face
+STEM_R        = 0.3    # slot corner radius
 
-RELIEF_X     = 13.0   # underside switch-clearance pocket X (set RELIEF_DEPTH=0 to skip)
-RELIEF_Y     = 13.0   # underside switch-clearance pocket Y
-RELIEF_DEPTH = 2.2    # pocket depth from bottom face
-RELIEF_R     = 1.0    # pocket corner radius
-
-COMP_NAME    = "Keycap_1u"
+COMP_NAME     = "Keycap_1u"
 # =========================================================================
 
 
@@ -55,8 +54,6 @@ def p3(x_mm, y_mm, z_mm=0.0):
 
 
 def add_rounded_rect(sketch, cx, cy, w, h, r):
-    """Draw a centered rounded rectangle (mm). Falls back to a plain rect if r<=0.
-    Coordinates are sketch-local; returns nothing (read sketch.profiles after)."""
     lines = sketch.sketchCurves.sketchLines
     arcs = sketch.sketchCurves.sketchArcs
     r = max(0.0, min(r, (min(w, h) / 2.0) - 1e-4))
@@ -65,7 +62,6 @@ def add_rounded_rect(sketch, cx, cy, w, h, r):
         lines.addTwoPointRectangle(p3(cx - hw, cy - hh), p3(cx + hw, cy + hh))
         return
     q = math.pi / 2.0
-    # tangent points (CCW from bottom of right edge)
     p1 = p3(cx + hw, cy - hh + r)
     p2 = p3(cx + hw, cy + hh - r)
     p3b = p3(cx + hw - r, cy + hh)
@@ -84,6 +80,15 @@ def add_rounded_rect(sketch, cx, cy, w, h, r):
     arcs.addByCenterStartSweep(p3(cx + hw - r, cy - hh + r), p8, q)
 
 
+def ensure_param(design, name, expr, unit, comment):
+    p = design.userParameters.itemByName(name)
+    if p:
+        p.expression = expr
+        return p
+    return design.userParameters.add(
+        name, adsk.core.ValueInput.createByString(expr), unit, comment)
+
+
 def run(context):
     ui = None
     try:
@@ -93,9 +98,15 @@ def run(context):
         if not design:
             ui.messageBox("Open a Fusion Design first.")
             return
+        design.designType = adsk.fusion.DesignTypes.ParametricDesignType
         root = design.rootComponent
 
-        # remove prior runs
+        # live user parameters
+        ensure_param(design, "cyl_dia", "{} mm".format(CYL_DIA), "mm", "raised cylinder diameter")
+        ensure_param(design, "cyl_h", "{} mm".format(CYL_H), "mm", "raised cylinder height")
+        ensure_param(design, "dish_depth", "{} mm".format(DISH_DEPTH), "mm", "dish depth (re-run to refresh)")
+
+        # clear prior runs
         for occ in list(root.occurrences):
             if occ.component.name == COMP_NAME:
                 occ.deleteMe()
@@ -104,96 +115,116 @@ def run(context):
         comp = occ.component
         comp.name = COMP_NAME
         feats = comp.features
-
-        # --- top construction plane at BODY_H ---
         planes = comp.constructionPlanes
-        pin = planes.createInput()
-        pin.setByOffset(comp.xYConstructionPlane, val(BODY_H))
-        plane_top = planes.add(pin)
 
-        # --- base profile (z=0) ---
+        def plane_at(z_mm):
+            pin = planes.createInput()
+            pin.setByOffset(comp.xYConstructionPlane, val(z_mm))
+            return planes.add(pin)
+
+        # --- 1. base profile + vertical skirt extrude ---
         sk_base = comp.sketches.add(comp.xYConstructionPlane)
         sk_base.isComputeDeferred = True
         add_rounded_rect(sk_base, 0, 0, BASE_X, BASE_Y, CORNER_R)
         sk_base.isComputeDeferred = False
-        prof_base = sk_base.profiles.item(0)
+        ein = feats.extrudeFeatures.createInput(
+            sk_base.profiles.item(0),
+            adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+        ein.setDistanceExtent(False, val(SKIRT_H))
+        ext = feats.extrudeFeatures.add(ein)
+        body = ext.bodies.item(0)
+        body.name = "Keycap"
 
-        # --- top profile (z=BODY_H) ---
+        # --- 2. loft taper from skirt top to smaller top ---
+        plane_skirt = plane_at(SKIRT_H)
+        sk_st = comp.sketches.add(plane_skirt)
+        sk_st.isComputeDeferred = True
+        add_rounded_rect(sk_st, 0, 0, BASE_X, BASE_Y, CORNER_R)
+        sk_st.isComputeDeferred = False
+
+        plane_top = plane_at(SKIRT_H + TAPER_H)
         sk_top = comp.sketches.add(plane_top)
         sk_top.isComputeDeferred = True
         add_rounded_rect(sk_top, 0, 0, TOP_X, TOP_Y, CORNER_R)
         sk_top.isComputeDeferred = False
-        prof_top = sk_top.profiles.item(0)
 
-        # --- loft solid body ---
         lin = feats.loftFeatures.createInput(
-            adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-        lin.loftSections.add(prof_base)
-        lin.loftSections.add(prof_top)
+            adsk.fusion.FeatureOperations.JoinFeatureOperation)
+        lin.loftSections.add(sk_st.profiles.item(0))
+        lin.loftSections.add(sk_top.profiles.item(0))
         lin.isSolid = True
-        loft = feats.loftFeatures.add(lin)
-        body = loft.bodies.item(0)
-        body.name = "Keycap"
+        feats.loftFeatures.add(lin)
 
-        # --- raised cylinder, join ---
+        # --- 3. raised cylinder (LIVE: driven by cyl_dia / cyl_h) ---
         sk_cyl = comp.sketches.add(plane_top)
-        sk_cyl.sketchCurves.sketchCircles.addByCenterRadius(
+        circ = sk_cyl.sketchCurves.sketchCircles.addByCenterRadius(
             p3(0, 0), cm(CYL_DIA / 2.0))
-        ein = feats.extrudeFeatures.createInput(
+        try:
+            ddim = sk_cyl.sketchDimensions.addDiameterDimension(
+                circ, p3(CYL_DIA / 2.0, 0, 0))
+            ddim.parameter.expression = "cyl_dia"
+        except:
+            pass
+        cin = feats.extrudeFeatures.createInput(
             sk_cyl.profiles.item(0),
             adsk.fusion.FeatureOperations.JoinFeatureOperation)
-        ein.setDistanceExtent(False, val(CYL_H))
-        feats.extrudeFeatures.add(ein)
+        cin.setDistanceExtent(False, adsk.core.ValueInput.createByString("cyl_h"))
+        feats.extrudeFeatures.add(cin)
 
-        # --- spherical dish cut on cylinder face ---
-        a = CYL_DIA / 2.0
-        d = DISH_DEPTH
+        # --- 4. spherical dish cut (static; uses current param values) ---
+        a = design.userParameters.itemByName("cyl_dia").value / 2.0   # cm
+        d = design.userParameters.itemByName("dish_depth").value      # cm
+        ch = design.userParameters.itemByName("cyl_h").value          # cm
         R = (a * a + d * d) / (2.0 * d)
-        top_surface_z = BODY_H + CYL_H
-        center_z = top_surface_z - d + R
+        top_z = cm(SKIRT_H + TAPER_H) + ch
+        center_z = top_z - d + R
         tmp = adsk.fusion.TemporaryBRepManager.get()
-        sphere = tmp.createSphere(p3(0, 0, center_z), cm(R))
+        sphere = tmp.createSphere(adsk.core.Point3D.create(0, 0, center_z), R)
         bf = comp.features.baseFeatures.add()
         bf.startEdit()
-        sph_body = comp.bRepBodies.add(sphere, bf)
-        sph_body.name = "dish_tool"
+        sph = comp.bRepBodies.add(sphere, bf)
+        sph.name = "dish_tool"
         bf.finishEdit()
         tools = adsk.core.ObjectCollection.create()
         tools.add(comp.bRepBodies.itemByName("dish_tool"))
-        cin = feats.combineFeatures.createInput(
+        combin = feats.combineFeatures.createInput(
             comp.bRepBodies.itemByName("Keycap"), tools)
-        cin.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
-        cin.isKeepToolBodies = False
-        feats.combineFeatures.add(cin)
+        combin.operation = adsk.fusion.FeatureOperations.CutFeatureOperation
+        combin.isKeepToolBodies = False
+        feats.combineFeatures.add(combin)
 
-        # --- underside relief pocket (optional) ---
-        if RELIEF_DEPTH > 0:
-            sk_rel = comp.sketches.add(comp.xYConstructionPlane)
-            sk_rel.isComputeDeferred = True
-            add_rounded_rect(sk_rel, 0, 0, RELIEF_X, RELIEF_Y, RELIEF_R)
-            sk_rel.isComputeDeferred = False
-            rin = feats.extrudeFeatures.createInput(
-                sk_rel.profiles.item(0),
-                adsk.fusion.FeatureOperations.CutFeatureOperation)
-            rin.setDistanceExtent(False, val(RELIEF_DEPTH))
-            feats.extrudeFeatures.add(rin)
+        # --- 5. protruding Choc stems (boss extruded down, join) ---
+        sk_boss = comp.sketches.add(comp.xYConstructionPlane)
+        sk_boss.isComputeDeferred = True
+        add_rounded_rect(sk_boss, +STEM_PITCH / 2.0, 0, STEM_OUTER_W, STEM_OUTER_L, STEM_R)
+        add_rounded_rect(sk_boss, -STEM_PITCH / 2.0, 0, STEM_OUTER_W, STEM_OUTER_L, STEM_R)
+        sk_boss.isComputeDeferred = False
+        boss_profs = adsk.core.ObjectCollection.create()
+        for pr in sk_boss.profiles:
+            boss_profs.add(pr)
+        bin_ = feats.extrudeFeatures.createInput(
+            boss_profs, adsk.fusion.FeatureOperations.JoinFeatureOperation)
+        bin_.setDistanceExtent(False, val(-STEM_PROTRUDE))   # downward
+        feats.extrudeFeatures.add(bin_)
 
-        # --- Choc stem slots, cut up from bottom ---
-        sk_stem = comp.sketches.add(comp.xYConstructionPlane)
-        sk_stem.isComputeDeferred = True
-        add_rounded_rect(sk_stem, +STEM_PITCH / 2.0, 0, STEM_SLOT_W, STEM_SLOT_L, STEM_R)
-        add_rounded_rect(sk_stem, -STEM_PITCH / 2.0, 0, STEM_SLOT_W, STEM_SLOT_L, STEM_R)
-        sk_stem.isComputeDeferred = False
+        # --- 6. Choc slots cut through stems + up into body ---
+        sk_slot = comp.sketches.add(comp.xYConstructionPlane)
+        sk_slot.isComputeDeferred = True
+        add_rounded_rect(sk_slot, +STEM_PITCH / 2.0, 0, STEM_SLOT_W, STEM_SLOT_L, STEM_R)
+        add_rounded_rect(sk_slot, -STEM_PITCH / 2.0, 0, STEM_SLOT_W, STEM_SLOT_L, STEM_R)
+        sk_slot.isComputeDeferred = False
         slot_profs = adsk.core.ObjectCollection.create()
-        for pr in sk_stem.profiles:
+        for pr in sk_slot.profiles:
             slot_profs.add(pr)
         sin = feats.extrudeFeatures.createInput(
             slot_profs, adsk.fusion.FeatureOperations.CutFeatureOperation)
-        sin.setDistanceExtent(False, val(STEM_DEPTH))
+        # two-sided: up into the body, down through the boss
+        sin.setTwoSidesDistanceExtent(val(STEM_SLOT_UP), val(STEM_PROTRUDE + 0.2))
         feats.extrudeFeatures.add(sin)
 
-        design.designType = adsk.fusion.DesignTypes.ParametricDesignType
-        ui.messageBox("Keycap_1u built.\nEdit PARAMETERS and re-run to iterate.")
+        ui.messageBox("Keycap_1u (v2) built.\n"
+                      "cyl_dia / cyl_h are live in Change Parameters.\n"
+                      "Re-run after editing this file or to refresh the dish.")
 
     except:
         if ui:
