@@ -14,6 +14,7 @@ import adsk.core, adsk.fusion, traceback, math
 TAPER_INSET_X = 2.0
 TAPER_INSET_Y = 1.9
 CORNER_R      = 1.5
+SQUIRCLE_N    = 4.0    # squircle exponent for the top loft profile (higher=squarer)
 CHOC_STEM_W   = 1.2
 CHOC_STEM_L   = 3.0
 CHOC_PITCH    = 5.7
@@ -66,6 +67,22 @@ def add_rounded_rect(sketch, cx, cy, w, h, r):
     arcs.addByCenterStartSweep(p3(cx - hw + r, cy - hh + r), p6, q)
     lines.addByTwoPoints(p7, p8)
     arcs.addByCenterStartSweep(p3(cx + hw - r, cy - hh + r), p8, q)
+
+
+def add_squircle(sketch, cx, cy, w, h, n=4.0, npts=72):
+    a = w / 2.0
+    b = h / 2.0
+    pts = adsk.core.ObjectCollection.create()
+    for k in range(npts):
+        t = 2.0 * math.pi * k / npts
+        ct = math.cos(t)
+        st = math.sin(t)
+        x = a * (abs(ct) ** (2.0 / n)) * (1.0 if ct >= 0 else -1.0)
+        y = b * (abs(st) ** (2.0 / n)) * (1.0 if st >= 0 else -1.0)
+        pts.add(p3(cx + x, cy + y))
+    spl = sketch.sketchCurves.sketchFittedSplines.add(pts)
+    spl.isClosed = True
+    return spl
 
 
 def ensure_param(design, name, expr, unit, comment):
@@ -176,7 +193,7 @@ def build(design, v):
     plane_top = plane_expr("skirt_h + taper_h")
     sk_top = comp.sketches.add(plane_top)
     sk_top.isComputeDeferred = True
-    add_rounded_rect(sk_top, 0, 0, TOP_X, TOP_Y, CORNER_R)
+    add_squircle(sk_top, 0, 0, TOP_X, TOP_Y, SQUIRCLE_N)
     sk_top.isComputeDeferred = False
     lin = feats.loftFeatures.createInput(adsk.fusion.FeatureOperations.JoinFeatureOperation)
     lin.loftSections.add(sk_st.profiles.item(0))
