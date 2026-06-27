@@ -85,6 +85,19 @@ def add_squircle(sketch, cx, cy, w, h, n=4.0, npts=72):
     return spl
 
 
+def add_stadium(sketch, cx, cy, L, r):
+    if L <= 1e-6:
+        sketch.sketchCurves.sketchCircles.addByCenterRadius(p3(cx, cy), cm(r))
+        return
+    lines = sketch.sketchCurves.sketchLines
+    arcs = sketch.sketchCurves.sketchArcs
+    hl = L / 2.0
+    lines.addByTwoPoints(p3(cx - hl, cy + r), p3(cx + hl, cy + r))
+    lines.addByTwoPoints(p3(cx + hl, cy - r), p3(cx - hl, cy - r))
+    arcs.addByCenterStartSweep(p3(cx + hl, cy), p3(cx + hl, cy + r), -math.pi)
+    arcs.addByCenterStartSweep(p3(cx - hl, cy), p3(cx - hl, cy - r), -math.pi)
+
+
 def ensure_param(design, name, expr, unit, comment):
     p = design.userParameters.itemByName(name)
     if p:
@@ -243,58 +256,89 @@ def build(design, v):
         except:
             pass
 
-    # 4. solid cylinder
+    # 4. raised feature: circle (1u) or stadium pill (U>1)
+    pill_len = max(0.0, (U - 1.0) * px)
     sk_cyl = comp.sketches.add(plane_top)
-    circ = sk_cyl.sketchCurves.sketchCircles.addByCenterRadius(p3(0, 0), cm(CYL_DIA / 2.0))
-    try:
-        sk_cyl.sketchDimensions.addDiameterDimension(
-            circ, p3(CYL_DIA / 2.0, 0, 0)).parameter.expression = "cyl_dia"
-    except:
-        pass
+    if pill_len > 1e-6:
+        add_stadium(sk_cyl, 0, 0, pill_len, CYL_DIA / 2.0)
+    else:
+        circ = sk_cyl.sketchCurves.sketchCircles.addByCenterRadius(p3(0, 0), cm(CYL_DIA / 2.0))
+        try:
+            sk_cyl.sketchDimensions.addDiameterDimension(
+                circ, p3(CYL_DIA / 2.0, 0, 0)).parameter.expression = "cyl_dia"
+        except:
+            pass
     cin = feats.extrudeFeatures.createInput(
         sk_cyl.profiles.item(0), adsk.fusion.FeatureOperations.JoinFeatureOperation)
     cin.setDistanceExtent(False, adsk.core.ValueInput.createByString("cyl_h"))
     feats.extrudeFeatures.add(cin)
 
-    # 5. dish or bump (parametric revolve)
-    a0 = CYL_DIA / 2.0; d0 = DISH_DEPTH
+    # 5. dish or bump
+    a0 = CYL_DIA / 2.0
+    d0 = DISH_DEPTH
     R0 = (a0 * a0 + d0 * d0) / (2.0 * d0)
-    if v["top"] == "bump":
-        cz = SKIRT_H + TAPER_H + CYL_H + d0 - R0
-        cz_expr = "skirt_h + taper_h + cyl_h + dish_depth - dish_r"
-        top_op = adsk.fusion.FeatureOperations.JoinFeatureOperation
+    top_mm = SKIRT_H + TAPER_H + CYL_H
+    cz = (top_mm + d0 - R0) if v["top"] == "bump" else (top_mm - d0 + R0)
+    if pill_len > 1e-6:
+        # pill: capsule tool (sphere swept along X) - STATIC (not live)
+        tmp = adsk.fusion.TemporaryBRepManager.get()
+
+        def P(x, y, z):
+            return adsk.core.Point3D.create(cm(x), cm(y), cm(z))
+
+        tool = tmp.createCylinderOrCone(
+            P(-pill_len / 2.0, 0, cz), cm(R0), P(pill_len / 2.0, 0, cz), cm(R0))
+        tmp.booleanOperation(tool, tmp.createSphere(P(-pill_len / 2.0, 0, cz), cm(R0)),
+                             adsk.fusion.BooleanTypes.UnionBooleanType)
+        tmp.booleanOperation(tool, tmp.createSphere(P(pill_len / 2.0, 0, cz), cm(R0)),
+                             adsk.fusion.BooleanTypes.UnionBooleanType)
+        bf = comp.features.baseFeatures.add()
+        bf.startEdit()
+        comp.bRepBodies.add(tool, bf).name = "cap_tool"
+        bf.finishEdit()
+        tools = adsk.core.ObjectCollection.create()
+        tools.add(comp.bRepBodies.itemByName("cap_tool"))
+        cc = feats.combineFeatures.createInput(cap_body(), tools)
+        cc.operation = (adsk.fusion.FeatureOperations.JoinFeatureOperation if v["top"] == "bump"
+                        else adsk.fusion.FeatureOperations.CutFeatureOperation)
+        cc.isKeepToolBodies = False
+        feats.combineFeatures.add(cc)
     else:
-        cz = SKIRT_H + TAPER_H + CYL_H - d0 + R0
-        cz_expr = "skirt_h + taper_h + cyl_h - dish_depth + dish_r"
-        top_op = adsk.fusion.FeatureOperations.CutFeatureOperation
-    sk_d = comp.sketches.add(comp.xZConstructionPlane)
-    sgn = 1.0 if sk_d.yDirection.z >= 0 else -1.0
-    Cv = sgn * cm(cz)
-    arc = sk_d.sketchCurves.sketchArcs.addByCenterStartSweep(
-        adsk.core.Point3D.create(0, Cv, 0),
-        adsk.core.Point3D.create(0, Cv - cm(R0), 0), math.pi)
-    ln = sk_d.sketchCurves.sketchLines.addByTwoPoints(arc.startSketchPoint, arc.endSketchPoint)
-    cons = sk_d.geometricConstraints
-    axis_proj = sk_d.project(comp.zConstructionAxis)
-    if axis_proj.count > 0:
-        axisline = axis_proj.item(0)
-        cons.addCoincident(arc.centerSketchPoint, axisline)
-        cons.addCoincident(arc.startSketchPoint, axisline)
-        cons.addCoincident(arc.endSketchPoint, axisline)
-        rev_axis = axisline
-    else:
-        cons.addVertical(ln)
-        rev_axis = ln
-    dims = sk_d.sketchDimensions
-    dims.addRadialDimension(arc, adsk.core.Point3D.create(cm(R0 / 2.0), Cv, 0)).parameter.expression = "dish_r"
-    dims.addDistanceDimension(
-        sk_d.originPoint, arc.centerSketchPoint,
-        adsk.fusion.DimensionOrientations.VerticalDimensionOrientation,
-        adsk.core.Point3D.create(cm(2.0), Cv, 0)).parameter.expression = cz_expr
-    rin = feats.revolveFeatures.createInput(sk_d.profiles.item(0), rev_axis, top_op)
-    rin.setAngleExtent(False, adsk.core.ValueInput.createByString("360 deg"))
-    rin.participantBodies = [cap_body()]
-    feats.revolveFeatures.add(rin)
+        # round: parametric revolve (live)
+        if v["top"] == "bump":
+            cz_expr = "skirt_h + taper_h + cyl_h + dish_depth - dish_r"
+            top_op = adsk.fusion.FeatureOperations.JoinFeatureOperation
+        else:
+            cz_expr = "skirt_h + taper_h + cyl_h - dish_depth + dish_r"
+            top_op = adsk.fusion.FeatureOperations.CutFeatureOperation
+        sk_d = comp.sketches.add(comp.xZConstructionPlane)
+        sgn = 1.0 if sk_d.yDirection.z >= 0 else -1.0
+        Cv = sgn * cm(cz)
+        arc = sk_d.sketchCurves.sketchArcs.addByCenterStartSweep(
+            adsk.core.Point3D.create(0, Cv, 0),
+            adsk.core.Point3D.create(0, Cv - cm(R0), 0), math.pi)
+        ln = sk_d.sketchCurves.sketchLines.addByTwoPoints(arc.startSketchPoint, arc.endSketchPoint)
+        cons = sk_d.geometricConstraints
+        axis_proj = sk_d.project(comp.zConstructionAxis)
+        if axis_proj.count > 0:
+            axisline = axis_proj.item(0)
+            cons.addCoincident(arc.centerSketchPoint, axisline)
+            cons.addCoincident(arc.startSketchPoint, axisline)
+            cons.addCoincident(arc.endSketchPoint, axisline)
+            rev_axis = axisline
+        else:
+            cons.addVertical(ln)
+            rev_axis = ln
+        dims = sk_d.sketchDimensions
+        dims.addRadialDimension(arc, adsk.core.Point3D.create(cm(R0 / 2.0), Cv, 0)).parameter.expression = "dish_r"
+        dims.addDistanceDimension(
+            sk_d.originPoint, arc.centerSketchPoint,
+            adsk.fusion.DimensionOrientations.VerticalDimensionOrientation,
+            adsk.core.Point3D.create(cm(2.0), Cv, 0)).parameter.expression = cz_expr
+        rin = feats.revolveFeatures.createInput(sk_d.profiles.item(0), rev_axis, top_op)
+        rin.setAngleExtent(False, adsk.core.ValueInput.createByString("360 deg"))
+        rin.participantBodies = [cap_body()]
+        feats.revolveFeatures.add(rin)
 
     # 6. stems
     fallback = val(SKIRT_H + TAPER_H - WALL + STEM_PROTRUDE)
