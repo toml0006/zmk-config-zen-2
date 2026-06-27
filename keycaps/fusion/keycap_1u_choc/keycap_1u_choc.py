@@ -1,23 +1,16 @@
-# Choc/MX keycap generator - parametric, dialog-driven (v11)
-# Vertical skirt -> tapered loft -> shell box -> solid cylinder -> dish/bump ->
-# stems from the recessed ceiling. Builds in the ROOT component (works in Part docs).
+# Choc/MX keycap generator - parametric, dialog-driven (v12)
+# Vertical skirt -> tapered loft -> shell box -> (inner-wall draft) -> solid cylinder
+# -> dish/bump -> stems -> edge chamfers. Builds in the ROOT component (Part docs ok).
 #
-# Running the script opens a dialog:
-#   U            key width in units (depth always 1u)
-#   Spacing      choc (18x17) | mx (19.05 x 19.05)
-#   Stem         choc (twin towers) | mx (+ cross boss)
-#   Top          dish (concave) | bump (convex dome)
-#   skirt_h, taper_h, cyl_dia, cyl_h, dish_depth  (numeric; also live params)
-# Press OK to build. Re-running clears the timeline first.
+# Dialog: U, Spacing, Stem, Top, skirt_h, taper_h, cyl_dia, cyl_h, dish_depth, wall,
+#   draft_deg (inner-wall taper), and chamfers: top / bottom / cyl-rim / skirt edges.
+# All numeric values become live User Parameters. Re-running clears the timeline.
 #
 # HOW TO RUN: Utilities > ADD-INS > Scripts and Add-Ins (Shift+S) > Scripts >
 #   point at this folder > Run.
-#
-# Units in the dialog/params are MILLIMETERS (Fusion internal is cm).
 
 import adsk.core, adsk.fusion, traceback, math
 
-# fixed (non-dialog) constants
 TAPER_INSET_X = 2.0
 TAPER_INSET_Y = 1.9
 CORNER_R      = 1.5
@@ -33,8 +26,7 @@ STEM_PROTRUDE = 1.4
 STEM_R        = 0.3
 
 _SPACING = {"choc": (18.0, 17.0, 0.5), "mx": (19.05, 19.05, 1.05)}
-
-_handlers = []   # keep handlers alive
+_handlers = []
 
 
 def cm(mm):
@@ -108,6 +100,20 @@ def clear_design(design):
             pass
 
 
+def edge_zspan(e):
+    bb = e.boundingBox
+    return (bb.minPoint.z + bb.maxPoint.z) / 2.0, (bb.maxPoint.z - bb.minPoint.z)
+
+
+def edge_radius(e):
+    bb = e.boundingBox
+    cx = (bb.minPoint.x + bb.maxPoint.x) / 2.0
+    cy = (bb.minPoint.y + bb.maxPoint.y) / 2.0
+    rmid = math.hypot(cx, cy)
+    rext = max(bb.maxPoint.x - bb.minPoint.x, bb.maxPoint.y - bb.minPoint.y) / 2.0
+    return max(rmid, rext)
+
+
 def build(design, v):
     design.designType = adsk.fusion.DesignTypes.ParametricDesignType
     clear_design(design)
@@ -120,6 +126,11 @@ def build(design, v):
     ensure_param(design, "dish_r",
                  "(((cyl_dia / 2) * (cyl_dia / 2)) + (dish_depth * dish_depth)) / (2 * dish_depth)",
                  "mm", "derived dish/bump sphere radius")
+    ensure_param(design, "draft_deg", "{} deg".format(v["draft_deg"]), "deg", "inner wall draft angle")
+    ensure_param(design, "chamfer_top", "{} mm".format(v["chamfer_top"]), "mm", "top perimeter chamfer")
+    ensure_param(design, "chamfer_bottom", "{} mm".format(v["chamfer_bottom"]), "mm", "bottom edge chamfer")
+    ensure_param(design, "chamfer_cyl", "{} mm".format(v["chamfer_cyl"]), "mm", "cylinder rim chamfer")
+    ensure_param(design, "chamfer_skirt", "{} mm".format(v["chamfer_skirt"]), "mm", "skirt/taper edge chamfer")
 
     px, py, gap = _SPACING[v["spacing"]]
     BASE_X = v["U"] * px - gap
@@ -127,8 +138,7 @@ def build(design, v):
     TOP_X = BASE_X - TAPER_INSET_X
     TOP_Y = BASE_Y - TAPER_INSET_Y
     SKIRT_H = v["skirt_h"]; TAPER_H = v["taper_h"]
-    CYL_DIA = v["cyl_dia"]; CYL_H = v["cyl_h"]; DISH_DEPTH = v["dish_depth"]
-    WALL = v["wall"]
+    CYL_DIA = v["cyl_dia"]; CYL_H = v["cyl_h"]; DISH_DEPTH = v["dish_depth"]; WALL = v["wall"]
 
     comp = design.rootComponent
     feats = comp.features
@@ -181,12 +191,34 @@ def build(design, v):
     sh_in.insideThickness = val(WALL)
     feats.shellFeatures.add(sh_in)
 
+    # 3b. inner-wall draft (taper the cavity walls inward going up)
+    if v["draft_deg"] > 0:
+        try:
+            inner = adsk.core.ObjectCollection.create()
+            for f in cap_body().faces:
+                g = f.geometry
+                if isinstance(g, adsk.core.Plane) and abs(g.normal.z) < 0.05:
+                    pt = f.pointOnFace
+                    if g.normal.x * (-pt.x) + g.normal.y * (-pt.y) > 0:   # faces inward
+                        inner.add(f)
+            if inner.count > 0:
+                dfeats = feats.draftFeatures
+                ang = adsk.core.ValueInput.createByString("draft_deg")
+                try:
+                    di = dfeats.createInput(inner, comp.xYConstructionPlane, ang, False)
+                except:
+                    di = dfeats.createInput(inner, comp.xYConstructionPlane, False)
+                    di.setSingleSide(ang) if hasattr(di, "setSingleSide") else None
+                dfeats.add(di)
+        except:
+            pass
+
     # 4. solid cylinder
     sk_cyl = comp.sketches.add(plane_top)
     circ = sk_cyl.sketchCurves.sketchCircles.addByCenterRadius(p3(0, 0), cm(CYL_DIA / 2.0))
     try:
-        ddim = sk_cyl.sketchDimensions.addDiameterDimension(circ, p3(CYL_DIA / 2.0, 0, 0))
-        ddim.parameter.expression = "cyl_dia"
+        sk_cyl.sketchDimensions.addDiameterDimension(
+            circ, p3(CYL_DIA / 2.0, 0, 0)).parameter.expression = "cyl_dia"
     except:
         pass
     cin = feats.extrudeFeatures.createInput(
@@ -282,6 +314,56 @@ def build(design, v):
         sk_stem.isComputeDeferred = False
         grow_join(sk_stem)
 
+    # 7. edge chamfers (heuristic Z-level + radial-band selection)
+    ztol = cm(0.10)
+    z_bottom = cm(0.0)
+    z_skirt = cm(SKIRT_H)
+    z_top = cm(SKIRT_H + TAPER_H)
+    z_cyl = cm(SKIRT_H + TAPER_H + CYL_H)
+    r_outer = cm(min(BASE_X, BASE_Y) / 2.0 - 0.6)
+    r_topsep = cm((CYL_DIA / 2.0 + min(TOP_X, TOP_Y) / 2.0) / 2.0)
+    r_cyl_lo = cm(CYL_DIA / 2.0 - 1.0)
+    r_cyl_hi = cm(CYL_DIA / 2.0 + 1.0)
+    cfeats = feats.chamferFeatures
+
+    def horiz(e):
+        _, dz = edge_zspan(e)
+        return dz < cm(0.05)
+
+    def chamfer(pred, param_name, dist_mm):
+        if dist_mm <= 0:
+            return
+        col = adsk.core.ObjectCollection.create()
+        for e in cap_body().edges:
+            try:
+                if pred(e):
+                    col.add(e)
+            except:
+                pass
+        if col.count == 0:
+            return
+        try:
+            ci = cfeats.createInput2()
+            ci.chamferEdgeSets.addEqualDistanceChamferEdgeSet(
+                col, adsk.core.ValueInput.createByString(param_name), True)
+            cfeats.add(ci)
+        except:
+            try:
+                ci = cfeats.createInput(col, True)
+                ci.setToEqualDistance(val(dist_mm))
+                cfeats.add(ci)
+            except:
+                pass
+
+    chamfer(lambda e: horiz(e) and abs(edge_zspan(e)[0] - z_bottom) < ztol and edge_radius(e) > r_outer,
+            "chamfer_bottom", v["chamfer_bottom"])
+    chamfer(lambda e: horiz(e) and abs(edge_zspan(e)[0] - z_skirt) < ztol and edge_radius(e) > r_outer,
+            "chamfer_skirt", v["chamfer_skirt"])
+    chamfer(lambda e: horiz(e) and abs(edge_zspan(e)[0] - z_top) < ztol and edge_radius(e) > r_topsep,
+            "chamfer_top", v["chamfer_top"])
+    chamfer(lambda e: horiz(e) and abs(edge_zspan(e)[0] - z_cyl) < ztol and r_cyl_lo < edge_radius(e) < r_cyl_hi,
+            "chamfer_cyl", v["chamfer_cyl"])
+
 
 def read_inputs(inputs):
     return {
@@ -295,6 +377,11 @@ def read_inputs(inputs):
         "cyl_h": inputs.itemById("cyl_h").value * 10.0,
         "dish_depth": inputs.itemById("dish_depth").value * 10.0,
         "wall": inputs.itemById("wall").value * 10.0,
+        "draft_deg": math.degrees(inputs.itemById("draft_deg").value),
+        "chamfer_top": inputs.itemById("chamfer_top").value * 10.0,
+        "chamfer_bottom": inputs.itemById("chamfer_bottom").value * 10.0,
+        "chamfer_cyl": inputs.itemById("chamfer_cyl").value * 10.0,
+        "chamfer_skirt": inputs.itemById("chamfer_skirt").value * 10.0,
     }
 
 
@@ -311,20 +398,25 @@ class ExecuteHandler(adsk.core.CommandEventHandler):
 
 class CreatedHandler(adsk.core.CommandCreatedEventHandler):
     def notify(self, args):
-        inputs = args.command.commandInputs
-        inputs.addValueInput("u", "U (width units)", "", adsk.core.ValueInput.createByReal(1.0))
-        sp = inputs.addDropDownCommandInput("spacing", "Spacing", adsk.core.DropDownStyles.TextListDropDownStyle)
+        i = args.command.commandInputs
+        i.addValueInput("u", "U (width units)", "", adsk.core.ValueInput.createByReal(1.0))
+        sp = i.addDropDownCommandInput("spacing", "Spacing", adsk.core.DropDownStyles.TextListDropDownStyle)
         sp.listItems.add("choc", True); sp.listItems.add("mx", False)
-        st = inputs.addDropDownCommandInput("stem", "Stem", adsk.core.DropDownStyles.TextListDropDownStyle)
+        st = i.addDropDownCommandInput("stem", "Stem", adsk.core.DropDownStyles.TextListDropDownStyle)
         st.listItems.add("choc", True); st.listItems.add("mx", False)
-        tp = inputs.addDropDownCommandInput("top", "Top", adsk.core.DropDownStyles.TextListDropDownStyle)
+        tp = i.addDropDownCommandInput("top", "Top", adsk.core.DropDownStyles.TextListDropDownStyle)
         tp.listItems.add("dish", True); tp.listItems.add("bump", False)
-        inputs.addValueInput("skirt_h", "Skirt height", "mm", val(2.5))
-        inputs.addValueInput("taper_h", "Taper height", "mm", val(2.0))
-        inputs.addValueInput("cyl_dia", "Cylinder dia", "mm", val(13.0))
-        inputs.addValueInput("cyl_h", "Cylinder height", "mm", val(1.5))
-        inputs.addValueInput("dish_depth", "Dish/bump depth", "mm", val(0.8))
-        inputs.addValueInput("wall", "Wall thickness", "mm", val(1.2))
+        i.addValueInput("skirt_h", "Skirt height", "mm", val(2.5))
+        i.addValueInput("taper_h", "Taper height", "mm", val(2.0))
+        i.addValueInput("cyl_dia", "Cylinder dia", "mm", val(13.0))
+        i.addValueInput("cyl_h", "Cylinder height", "mm", val(1.5))
+        i.addValueInput("dish_depth", "Dish/bump depth", "mm", val(0.8))
+        i.addValueInput("wall", "Wall thickness", "mm", val(1.2))
+        i.addValueInput("draft_deg", "Inner wall draft", "deg", adsk.core.ValueInput.createByString("0 deg"))
+        i.addValueInput("chamfer_top", "Chamfer: top perim", "mm", val(0.0))
+        i.addValueInput("chamfer_bottom", "Chamfer: bottom edge", "mm", val(0.0))
+        i.addValueInput("chamfer_cyl", "Chamfer: cylinder rim", "mm", val(0.0))
+        i.addValueInput("chamfer_skirt", "Chamfer: skirt/taper", "mm", val(0.0))
         onExec = ExecuteHandler()
         args.command.execute.add(onExec)
         _handlers.append(onExec)
