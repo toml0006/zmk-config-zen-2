@@ -172,7 +172,20 @@ def build(design, v):
         return planes.add(pin)
 
     def cap_body():
-        return comp.bRepBodies.itemByName("Keycap")
+        b = comp.bRepBodies.itemByName("Keycap")
+        if not b:
+            best, bv = None, -1.0
+            for bb in comp.bRepBodies:
+                try:
+                    vol = bb.volume
+                except:
+                    vol = 0.0
+                if vol > bv:
+                    bv, best = vol, bb
+            if best:
+                best.name = "Keycap"
+            b = best
+        return b
 
     # 1. base + vertical skirt
     sk_base = comp.sketches.add(comp.xYConstructionPlane)
