@@ -146,7 +146,6 @@ def edge_radius(e):
 
 def build(design, v):
     design.designType = adsk.fusion.DesignTypes.ParametricDesignType
-    clear_design(design)
 
     ensure_param(design, "skirt_h", "{} mm".format(v["skirt_h"]), "mm", "vertical skirt height")
     ensure_param(design, "taper_h", "{} mm".format(v["taper_h"]), "mm", "lofted taper offset height")
@@ -184,21 +183,41 @@ def build(design, v):
         pin.setByOffset(comp.xYConstructionPlane, adsk.core.ValueInput.createByString(expr))
         return planes.add(pin)
 
+    existing_tokens = set()
+    for _b in comp.bRepBodies:
+        try:
+            existing_tokens.add(_b.entityToken)
+        except:
+            pass
+    run_index = len(existing_tokens)
+    _idx = run_index + 1
+    while comp.bRepBodies.itemByName("Keycap_{}".format(_idx)):
+        _idx += 1
+    unique = "Keycap_{}".format(_idx)
+    dx = run_index * 22.0
+
     def cap_body():
-        b = comp.bRepBodies.itemByName("Keycap")
-        if not b:
-            best, bv = None, -1.0
-            for bb in comp.bRepBodies:
-                try:
-                    vol = bb.volume
-                except:
-                    vol = 0.0
-                if vol > bv:
-                    bv, best = vol, bb
-            if best:
-                best.name = "Keycap"
-            b = best
-        return b
+        b = comp.bRepBodies.itemByName(unique)
+        if b:
+            return b
+        best, bv = None, -1.0
+        for bb in comp.bRepBodies:
+            try:
+                if bb.entityToken in existing_tokens:
+                    continue
+            except:
+                pass
+            if "tool" in (bb.name or ""):
+                continue
+            try:
+                vol = bb.volume
+            except:
+                vol = 0.0
+            if vol > bv:
+                bv, best = vol, bb
+        if best:
+            best.name = unique
+        return best
 
     # 1. base + vertical skirt
     sk_base = comp.sketches.add(comp.xYConstructionPlane)
@@ -208,7 +227,7 @@ def build(design, v):
     ein = feats.extrudeFeatures.createInput(
         sk_base.profiles.item(0), adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
     ein.setDistanceExtent(False, adsk.core.ValueInput.createByString("skirt_h"))
-    feats.extrudeFeatures.add(ein).bodies.item(0).name = "Keycap"
+    feats.extrudeFeatures.add(ein).bodies.item(0).name = unique
 
     # 2. loft taper
     plane_skirt = plane_expr("skirt_h")
@@ -226,6 +245,7 @@ def build(design, v):
     lin.loftSections.add(sk_top.profiles.item(0))
     lin.isSolid = True
     feats.loftFeatures.add(lin)
+    cap_body()  # re-tag merged body with unique name
 
     # 3. shell box
     faces = adsk.core.ObjectCollection.create()
@@ -399,6 +419,7 @@ def build(design, v):
     r_cyl_lo = cm(CYL_DIA / 2.0 - 1.0)
     r_cyl_hi = cm(CYL_DIA / 2.0 + 1.0)
     cfeats = feats.chamferFeatures
+    ffeats = feats.filletFeatures
 
     def horiz(e):
         _, dz = edge_zspan(e)
@@ -415,6 +436,19 @@ def build(design, v):
             except:
                 pass
         if col.count == 0:
+            return
+        if v["edge"] == "fillet":
+            try:
+                fi = ffeats.createInput()
+                fi.addConstantRadiusEdgeSet(col, adsk.core.ValueInput.createByString(param_name), True)
+                ffeats.add(fi)
+            except:
+                try:
+                    fi = ffeats.createInput()
+                    fi.addConstantRadiusEdgeSet(col, val(dist_mm), True)
+                    ffeats.add(fi)
+                except:
+                    pass
             return
         try:
             ci = cfeats.createInput2()
@@ -438,6 +472,28 @@ def build(design, v):
     chamfer(lambda e: horiz(e) and abs(edge_zspan(e)[0] - z_cyl) < ztol and r_cyl_lo < edge_radius(e) < r_cyl_hi,
             "chamfer_cyl", v["chamfer_cyl"])
 
+    # offset this run's body so repeated runs line up side-by-side
+    if dx > 0:
+        try:
+            body = cap_body()
+            if body:
+                col = adsk.core.ObjectCollection.create()
+                col.add(body)
+                try:
+                    mi = feats.moveFeatures.createInput2(col)
+                    mi.defineAsTranslateXYZ(
+                        adsk.core.ValueInput.createByReal(cm(dx)),
+                        adsk.core.ValueInput.createByReal(0.0),
+                        adsk.core.ValueInput.createByReal(0.0), True)
+                    feats.moveFeatures.add(mi)
+                except:
+                    m = adsk.core.Matrix3D.create()
+                    m.translation = adsk.core.Vector3D.create(cm(dx), 0, 0)
+                    feats.moveFeatures.add(feats.moveFeatures.createInput(col, m))
+        except:
+            pass
+
+
 
 def read_inputs(inputs):
     return {
@@ -445,6 +501,7 @@ def read_inputs(inputs):
         "spacing": inputs.itemById("spacing").selectedItem.name,
         "stem": inputs.itemById("stem").selectedItem.name,
         "top": inputs.itemById("top").selectedItem.name,
+        "edge": inputs.itemById("edge").selectedItem.name,
         "skirt_h": inputs.itemById("skirt_h").value * 10.0,
         "taper_h": inputs.itemById("taper_h").value * 10.0,
         "cyl_dia": inputs.itemById("cyl_dia").value * 10.0,
@@ -480,6 +537,8 @@ class CreatedHandler(adsk.core.CommandCreatedEventHandler):
         st.listItems.add("choc", True); st.listItems.add("mx", False)
         tp = i.addDropDownCommandInput("top", "Top", adsk.core.DropDownStyles.TextListDropDownStyle)
         tp.listItems.add("dish", True); tp.listItems.add("bump", False)
+        ed = i.addDropDownCommandInput("edge", "Edge style", adsk.core.DropDownStyles.TextListDropDownStyle)
+        ed.listItems.add("chamfer", True); ed.listItems.add("fillet", False)
         i.addValueInput("skirt_h", "Skirt height", "mm", val(1.7))
         i.addValueInput("taper_h", "Taper height", "mm", val(2.0))
         i.addValueInput("cyl_dia", "Cylinder dia", "mm", val(13.0))
