@@ -28,7 +28,10 @@ STEM_R        = 0.3
 HOMING_BUMP_R = 0.6    # homing bump radius
 HOMING_LINE_LEN = 4.0  # homing line length (X)
 HOMING_LINE_R = 0.4    # homing line half-width
-HOMING_EDGE_INSET = 2.5  # inset from top front edge for 'bottom' position
+HOMING_EDGE_INSET = 2.5  # (legacy) inset from top front edge
+HOMING_INSET = 1.5     # path inset from cylinder/stadium edge (bottom pos)
+HOMING_ARC_DEG = 45.0  # half-angle of the bottom arc for round caps
+HOMING_BUMP_SPACING = 2.2  # spacing between bumps
 
 _SPACING = {"choc": (18.0, 17.0, 0.5), "mx": (19.05, 19.05, 1.05)}
 _handlers = []
@@ -412,46 +415,66 @@ def build(design, v):
         sk_stem.isComputeDeferred = False
         grow_join(sk_stem)
 
-    # 6b. optional homing feature (bump or line), sitting on the top surface
+    # 6b. optional homing feature(s): bump(s) or line; center or bottom (curved path)
     if v["homing"] != "none":
+        cyl_r = CYL_DIA / 2.0
+        count = max(1, int(v["homing_count"]))
+        is_line = (v["homing"] == "line")
+        bead_r = HOMING_LINE_R if is_line else HOMING_BUMP_R
+        pts = []
         if v["homing_pos"] == "bottom":
-            hy = -(TOP_Y / 2.0 - HOMING_EDGE_INSET)
+            rad = max(cyl_r - HOMING_INSET, 0.5)
+            if pill_len > 1e-6:
+                y = -rad
+                xspan = pill_len
+                n = max(2, int(xspan / bead_r) + 1) if is_line else count
+                xs = [0.0] if n <= 1 else [-xspan / 2.0 + xspan * k / (n - 1) for k in range(n)]
+                pts = [(x, y) for x in xs]
+            else:
+                half = math.radians(HOMING_ARC_DEG)
+                n = max(2, int(2 * half * rad / bead_r) + 1) if is_line else count
+                base = -math.pi / 2.0
+                angs = [base] if n <= 1 else [base - half + 2 * half * k / (n - 1) for k in range(n)]
+                pts = [(rad * math.cos(a), rad * math.sin(a)) for a in angs]
         else:
-            hy = 0.0
-        hx = 0.0
-        rr2 = hx * hx + hy * hy
-        if v["top"] == "bump":
-            czs = top_mm + DISH_DEPTH - R0
-            surf = czs + math.sqrt(max(R0 * R0 - rr2, 0.0))
-        else:
-            czs = top_mm - DISH_DEPTH + R0
-            surf = czs - math.sqrt(max(R0 * R0 - rr2, 0.0))
+            Lh = (pill_len + HOMING_LINE_LEN) / 2.0
+            if is_line:
+                n = max(2, int(2 * Lh / bead_r) + 1)
+                xs = [-Lh + 2 * Lh * k / (n - 1) for k in range(n)]
+            else:
+                xs = [(k - (count - 1) / 2.0) * HOMING_BUMP_SPACING for k in range(count)]
+            pts = [(x, 0.0) for x in xs]
+
         tmpb = adsk.fusion.TemporaryBRepManager.get()
 
         def HP(x, y, z):
             return adsk.core.Point3D.create(cm(x), cm(y), cm(z))
 
-        if v["homing"] == "line":
-            L = HOMING_LINE_LEN
-            r = HOMING_LINE_R
-            htool = tmpb.createCylinderOrCone(HP(hx - L / 2.0, hy, surf), cm(r),
-                                              HP(hx + L / 2.0, hy, surf), cm(r))
-            tmpb.booleanOperation(htool, tmpb.createSphere(HP(hx - L / 2.0, hy, surf), cm(r)),
-                                  adsk.fusion.BooleanTypes.UnionBooleanType)
-            tmpb.booleanOperation(htool, tmpb.createSphere(HP(hx + L / 2.0, hy, surf), cm(r)),
-                                  adsk.fusion.BooleanTypes.UnionBooleanType)
-        else:
-            htool = tmpb.createSphere(HP(hx, hy, surf), cm(HOMING_BUMP_R))
-        hbf = comp.features.baseFeatures.add()
-        hbf.startEdit()
-        comp.bRepBodies.add(htool, hbf).name = "homing_tool"
-        hbf.finishEdit()
-        htools = adsk.core.ObjectCollection.create()
-        htools.add(comp.bRepBodies.itemByName("homing_tool"))
-        hj = feats.combineFeatures.createInput(cap_body(), htools)
-        hj.operation = adsk.fusion.FeatureOperations.JoinFeatureOperation
-        hj.isKeepToolBodies = False
-        feats.combineFeatures.add(hj)
+        def surf_z(x, y):
+            rr2 = (y * y) if pill_len > 1e-6 else (x * x + y * y)
+            root = math.sqrt(max(R0 * R0 - rr2, 0.0))
+            if v["top"] == "bump":
+                return top_mm + DISH_DEPTH - R0 + root
+            return top_mm - DISH_DEPTH + R0 - root
+
+        htool = None
+        for (x, y) in pts:
+            sph = tmpb.createSphere(HP(x, y, surf_z(x, y)), cm(bead_r))
+            if htool is None:
+                htool = sph
+            else:
+                tmpb.booleanOperation(htool, sph, adsk.fusion.BooleanTypes.UnionBooleanType)
+        if htool is not None:
+            hbf = comp.features.baseFeatures.add()
+            hbf.startEdit()
+            comp.bRepBodies.add(htool, hbf).name = "homing_tool"
+            hbf.finishEdit()
+            htools = adsk.core.ObjectCollection.create()
+            htools.add(comp.bRepBodies.itemByName("homing_tool"))
+            hj = feats.combineFeatures.createInput(cap_body(), htools)
+            hj.operation = adsk.fusion.FeatureOperations.JoinFeatureOperation
+            hj.isKeepToolBodies = False
+            feats.combineFeatures.add(hj)
 
     # 7. edge chamfers (heuristic Z-level + radial-band selection)
     ztol = cm(0.10)
@@ -549,6 +572,7 @@ def read_inputs(inputs):
         "edge": inputs.itemById("edge").selectedItem.name,
         "homing": inputs.itemById("homing").selectedItem.name,
         "homing_pos": inputs.itemById("homing_pos").selectedItem.name,
+        "homing_count": inputs.itemById("homing_count").value,
         "skirt_h": inputs.itemById("skirt_h").value * 10.0,
         "taper_h": inputs.itemById("taper_h").value * 10.0,
         "cyl_dia": inputs.itemById("cyl_dia").value * 10.0,
@@ -590,6 +614,7 @@ class CreatedHandler(adsk.core.CommandCreatedEventHandler):
         hm.listItems.add("none", True); hm.listItems.add("bump", False); hm.listItems.add("line", False)
         hp = i.addDropDownCommandInput("homing_pos", "Homing pos", adsk.core.DropDownStyles.TextListDropDownStyle)
         hp.listItems.add("center", True); hp.listItems.add("bottom", False)
+        i.addIntegerSpinnerCommandInput("homing_count", "Homing bump count", 1, 12, 1, 1)
         i.addValueInput("skirt_h", "Skirt height", "mm", val(1.7))
         i.addValueInput("taper_h", "Taper height", "mm", val(2.0))
         i.addValueInput("cyl_dia", "Cylinder dia", "mm", val(13.0))
