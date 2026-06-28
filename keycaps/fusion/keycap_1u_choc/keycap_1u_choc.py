@@ -25,6 +25,10 @@ MX_CROSS_W2   = 1.31
 MX_CROSS_DEPTH= 3.9
 STEM_PROTRUDE = 1.4
 STEM_R        = 0.3
+HOMING_BUMP_R = 0.6    # homing bump radius
+HOMING_LINE_LEN = 4.0  # homing line length (X)
+HOMING_LINE_R = 0.4    # homing line half-width
+HOMING_EDGE_INSET = 2.5  # inset from top front edge for 'bottom' position
 
 _SPACING = {"choc": (18.0, 17.0, 0.5), "mx": (19.05, 19.05, 1.05)}
 _handlers = []
@@ -408,6 +412,47 @@ def build(design, v):
         sk_stem.isComputeDeferred = False
         grow_join(sk_stem)
 
+    # 6b. optional homing feature (bump or line), sitting on the top surface
+    if v["homing"] != "none":
+        if v["homing_pos"] == "bottom":
+            hy = -(TOP_Y / 2.0 - HOMING_EDGE_INSET)
+        else:
+            hy = 0.0
+        hx = 0.0
+        rr2 = hx * hx + hy * hy
+        if v["top"] == "bump":
+            czs = top_mm + DISH_DEPTH - R0
+            surf = czs + math.sqrt(max(R0 * R0 - rr2, 0.0))
+        else:
+            czs = top_mm - DISH_DEPTH + R0
+            surf = czs - math.sqrt(max(R0 * R0 - rr2, 0.0))
+        tmpb = adsk.fusion.TemporaryBRepManager.get()
+
+        def HP(x, y, z):
+            return adsk.core.Point3D.create(cm(x), cm(y), cm(z))
+
+        if v["homing"] == "line":
+            L = HOMING_LINE_LEN
+            r = HOMING_LINE_R
+            htool = tmpb.createCylinderOrCone(HP(hx - L / 2.0, hy, surf), cm(r),
+                                              HP(hx + L / 2.0, hy, surf), cm(r))
+            tmpb.booleanOperation(htool, tmpb.createSphere(HP(hx - L / 2.0, hy, surf), cm(r)),
+                                  adsk.fusion.BooleanTypes.UnionBooleanType)
+            tmpb.booleanOperation(htool, tmpb.createSphere(HP(hx + L / 2.0, hy, surf), cm(r)),
+                                  adsk.fusion.BooleanTypes.UnionBooleanType)
+        else:
+            htool = tmpb.createSphere(HP(hx, hy, surf), cm(HOMING_BUMP_R))
+        hbf = comp.features.baseFeatures.add()
+        hbf.startEdit()
+        comp.bRepBodies.add(htool, hbf).name = "homing_tool"
+        hbf.finishEdit()
+        htools = adsk.core.ObjectCollection.create()
+        htools.add(comp.bRepBodies.itemByName("homing_tool"))
+        hj = feats.combineFeatures.createInput(cap_body(), htools)
+        hj.operation = adsk.fusion.FeatureOperations.JoinFeatureOperation
+        hj.isKeepToolBodies = False
+        feats.combineFeatures.add(hj)
+
     # 7. edge chamfers (heuristic Z-level + radial-band selection)
     ztol = cm(0.10)
     z_bottom = cm(0.0)
@@ -502,6 +547,8 @@ def read_inputs(inputs):
         "stem": inputs.itemById("stem").selectedItem.name,
         "top": inputs.itemById("top").selectedItem.name,
         "edge": inputs.itemById("edge").selectedItem.name,
+        "homing": inputs.itemById("homing").selectedItem.name,
+        "homing_pos": inputs.itemById("homing_pos").selectedItem.name,
         "skirt_h": inputs.itemById("skirt_h").value * 10.0,
         "taper_h": inputs.itemById("taper_h").value * 10.0,
         "cyl_dia": inputs.itemById("cyl_dia").value * 10.0,
@@ -539,6 +586,10 @@ class CreatedHandler(adsk.core.CommandCreatedEventHandler):
         tp.listItems.add("dish", True); tp.listItems.add("bump", False)
         ed = i.addDropDownCommandInput("edge", "Edge style", adsk.core.DropDownStyles.TextListDropDownStyle)
         ed.listItems.add("chamfer", True); ed.listItems.add("fillet", False)
+        hm = i.addDropDownCommandInput("homing", "Homing", adsk.core.DropDownStyles.TextListDropDownStyle)
+        hm.listItems.add("none", True); hm.listItems.add("bump", False); hm.listItems.add("line", False)
+        hp = i.addDropDownCommandInput("homing_pos", "Homing pos", adsk.core.DropDownStyles.TextListDropDownStyle)
+        hp.listItems.add("center", True); hp.listItems.add("bottom", False)
         i.addValueInput("skirt_h", "Skirt height", "mm", val(1.7))
         i.addValueInput("taper_h", "Taper height", "mm", val(2.0))
         i.addValueInput("cyl_dia", "Cylinder dia", "mm", val(13.0))
