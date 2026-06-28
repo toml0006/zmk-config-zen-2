@@ -277,7 +277,7 @@ def build(design, v):
             pass
 
     # 4. raised feature: circle (1u) or stadium pill (U>1)
-    pill_len = max(0.0, (U - 1.0) * px)
+    pill_len = max(0.0, (v["U"] - 1.0) * px)
     sk_cyl = comp.sketches.add(plane_top)
     if pill_len > 1e-6:
         add_stadium(sk_cyl, 0, 0, pill_len, CYL_DIA / 2.0)
