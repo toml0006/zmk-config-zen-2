@@ -190,18 +190,19 @@ def build(design, v):
         pin.setByOffset(comp.xYConstructionPlane, adsk.core.ValueInput.createByString(expr))
         return planes.add(pin)
 
-    existing_tokens = set()
+    # track bodies by NAME (entityToken is unreliable before save)
+    existing_names = set()
     for _b in comp.bRepBodies:
         try:
-            existing_tokens.add(_b.entityToken)
+            existing_names.add(_b.name)
         except:
             pass
-    run_index = len(existing_tokens)
-    _idx = run_index + 1
-    while comp.bRepBodies.itemByName("Keycap_{}".format(_idx)):
+    prior_keycaps = sum(1 for _n in existing_names if _n.startswith("Keycap_"))
+    _idx = prior_keycaps + 1
+    while ("Keycap_{}".format(_idx)) in existing_names:
         _idx += 1
     unique = "Keycap_{}".format(_idx)
-    dx = run_index * 22.0
+    dx = len(existing_names) * 22.0
 
     def cap_body():
         b = comp.bRepBodies.itemByName(unique)
@@ -209,12 +210,14 @@ def build(design, v):
             return b
         best, bv = None, -1.0
         for bb in comp.bRepBodies:
+            nm = ""
             try:
-                if bb.entityToken in existing_tokens:
-                    continue
+                nm = bb.name or ""
             except:
-                pass
-            if "tool" in (bb.name or ""):
+                nm = ""
+            if nm in existing_names:   # a previously-built body, leave it alone
+                continue
+            if "tool" in nm:
                 continue
             try:
                 vol = bb.volume
