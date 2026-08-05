@@ -128,16 +128,32 @@ def largest_profile(sketch):
     return best
 
 
-def find_bottom_face(body, z_mm, tol_mm=0.25):
-    """Planar face pointing -Z at the given height. Fusion geometry objects
-    are SWIG proxies, so cast rather than isinstance."""
+def horizontal_faces(body, tol_mm=0.25):
+    """Every planar face lying flat, as (z_mm, area, face).
+
+    Identified from the face's own bounding box, not its surface normal: a
+    Plane's normal may be flipped relative to the face that uses it (see
+    BRepFace.isParamReversed), and Plane.origin is an arbitrary point on the
+    plane rather than anywhere near the face. The bounding box is neither.
+    """
+    out = []
     for f in body.faces:
-        g = adsk.core.Plane.cast(f.geometry)
-        if g is None or g.normal.z > -0.99:
+        if adsk.core.Plane.cast(f.geometry) is None:
             continue
-        if abs(g.origin.z / MM - z_mm) < tol_mm:
-            return f
-    return None
+        bb = f.boundingBox
+        zmin, zmax = bb.minPoint.z / MM, bb.maxPoint.z / MM
+        if abs(zmax - zmin) <= tol_mm:
+            out.append((zmin, f.area / (MM * MM), f))
+    return out
+
+
+def find_bottom_face(body, z_mm, tol_mm=0.25):
+    """Largest flat face at the given height."""
+    at_z = [t for t in horizontal_faces(body, tol_mm)
+            if abs(t[0] - z_mm) <= tol_mm]
+    if not at_z:
+        return None
+    return max(at_z, key=lambda t: t[1])[2]
 
 
 def build(root, prof):
@@ -168,7 +184,11 @@ def build(root, prof):
     # --- 2. shell it, removing the open underside --------------------------
     face = find_bottom_face(body, bot)
     if face is None:
-        raise RuntimeError('could not identify the bottom face to shell')
+        found = ', '.join('z=%.3f (%.0f mm2)' % (z, a)
+                          for z, a, _ in sorted(horizontal_faces(body)))
+        raise RuntimeError(
+            'no flat face at z=%.3f to shell.\nFlat faces on the body: %s'
+            % (bot, found or 'none'))
     rm = adsk.core.ObjectCollection.create()
     rm.add(face)
     sh = feats.shellFeatures.createInput(rm, False)
