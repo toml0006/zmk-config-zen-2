@@ -154,6 +154,79 @@ To check a value without opening Fusion:
 EXTRA_HEIGHT=3 /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd verify_rebuild.py
 ```
 
+## Stiffening
+
+This part is an **open** thin-walled section — a tray with no top. Open
+sections resist torsion by St. Venant warping, `J ≈ ⅓Σbt³`, which is feeble.
+A closed section resists by shear flow, Bredt's `J = 4A²/∮(ds/t)`.
+
+For this geometry (mean section 67.6 mm wide, 10.43 mm walls, PLA-ish
+G ≈ 1300 MPa):
+
+| configuration | J (mm⁴) | vs as-built | twist per N·m |
+|---|---|---|---|
+| open tray, t=1.5 (as built) | 99.5 | 1.0× | 59.0° |
+| open tray, t=2.0 | 235.8 | 2.4× | 24.9° |
+| open tray, t=2.4 | 407.5 | 4.1× | 14.4° |
+| open tray, t=3.0 | 795.9 | 8.0× | 7.4° |
+| **closed box, t=1.5** | **13931** | **140×** | **0.42°** |
+
+Closing the top dwarfs everything else. Doubling the wall to 3 mm buys 8× for
+8× the wall material; a working shear panel across the opening buys ~140×,
+and even a 25%-effective one buys ~36×.
+
+These are first-order thin-walled estimates (St. Venant open, Bredt closed).
+They ignore the rib, the port cutouts and end effects, so treat them as
+ratios rather than absolute predictions. The 140:1 conclusion is structural
+and robust to all of that.
+
+### What the script implements
+
+| knob | default | effect |
+|---|---|---|
+| `FILLET_RADIUS_MM` | 2.0 | fillets the inside floor-to-wall junction |
+| `wall_thickness` (Fusion parameter) | 1.5 | shell thickness; J scales with t³ |
+| `PORT_FRAMES` | `True` | reinforcing collars around the openings |
+| `PORT_FRAME_THICKNESS_MM` | 1.2 | how far a collar protrudes inward |
+| `PORT_FRAME_MARGIN_MM` | 2.0 | how far it extends past the opening |
+
+**Fillet.** The floor-to-wall corner is where the U-channel hinges. In pure
+thin-walled theory a junction fillet adds only modestly to `J`; its real value
+is cutting the stress concentration and the local hinging compliance at that
+corner. Cheap, no clearance cost. The script retries at decreasing radii and
+logs a skip if the geometry will not take it.
+
+**Wall thickness.** Now a live Fusion parameter, so you can try 2.0 or 2.4 in
+`Change Parameters` and check fit before committing.
+**The shell grows inward, so raising it shrinks the cavity by the same amount
+per side.** Verify the PCB and plate still drop in before printing.
+
+**Port collars.** `usb_port` is 16 mm wide in a 10.4 mm wall, so it removes
+most of that wall's local shear path. The collars put some back. Measured:
++201 mm³, 191 → 206 faces, and the **bounding box does not change** — they are
+entirely internal. They protrude 1.2 mm inward, so check clearance against the
+PCB and the connectors; `PORT_FRAMES = False` removes them.
+
+### The one thing not done: closing the section
+
+The obvious shear panel is the PCB, but the Corne Chocolate is a
+**plate-mount** board. `reference_corne-chocolate.kicad_pcb` has no
+`MountingHole` footprints at all — its only circular `Edge.Cuts` features are
+12 × Ø5.00 mm pass-throughs, and its `np_thru_hole` pads are 0.5 mm breakaway
+tab perforations. There is nothing to bolt perimeter bosses to.
+
+So closing the section needs one of:
+
+- **a redesigned plate** with fastener holes near the walls (corners first —
+  that is where shear flow transfers), bolting down to new bosses here;
+- **an internal ledge** around the inner wall at plate height, capturing the
+  plate laterally around its full perimeter. This needs no fasteners and no
+  PCB changes, and continuous lateral bearing transfers shear better than a
+  few point bolts. It does need the plate outline, to keep the fit;
+- **a diagonal brace** across the opening, if the top must stay open. Diagonals
+  load in tension/compression rather than bending, so they beat orthogonal
+  ribs by a wide margin.
+
 ## Editing cutouts
 
 Edit `CUTOUTS` in `typeractive_bottom_profile.py` and re-run:

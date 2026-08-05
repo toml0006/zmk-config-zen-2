@@ -59,6 +59,31 @@ HEIGHT_DEFAULT_MM = 0.0
 #   usb_port  z 3.792 .. 7.692        (2.740 below the rim)
 #   side_port z 6.932 .. 10.432       (flush with the rim -- a notch)
 
+# Stiffening options. This part is an OPEN thin-walled section, whose torsional
+# constant is only J ~ (1/3)*sum(b*t^3) -- about 99 mm^4 as built. Closing the
+# top would give ~14000 mm^4 (Bredt), i.e. ~140x, and no amount of local
+# stiffening approaches that. These three help, in descending order of value.
+
+# 3. Fillet the inside floor-to-wall junction. That corner is where the
+#    U-channel hinges. 0 disables.
+FILLET_RADIUS_MM = 2.0
+
+# 4. Wall thickness as a live Fusion parameter. J scales with t^3, so 1.5 -> 2.4
+#    is about 4x. Default is the as-built 1.5.
+#    CAUTION: the shell grows INWARD, so raising this shrinks the cavity by the
+#    same amount per side. Check the PCB and plate still fit before printing.
+WALL_PARAM = 'wall_thickness'
+
+# 5. Reinforcing frames around the port openings. A 16 mm hole in a 10.4 mm
+#    wall removes most of that wall's local shear path; a thicker collar around
+#    it puts some back. These protrude INWARD, so check clearance against the
+#    PCB and connectors. Set PORT_FRAMES = False to drop them.
+#    Frames are baked at the script's wall thickness -- changing wall_thickness
+#    in Change Parameters afterwards does not move them; re-run instead.
+PORT_FRAMES = True
+PORT_FRAME_THICKNESS_MM = 1.2
+PORT_FRAME_MARGIN_MM = 2.0
+
 # What the parameter drives: the height of the RIB only -- the L-shaped taller
 # wall run at the +X end, RIB_OUTLINE. The main perimeter wall, the floor and
 # the screw holes do not move.
@@ -165,6 +190,33 @@ def cutout_plan(c, wall_t, z_mm):
                 pt(c['at'] + through, u + half, z_mm))
     return (pt(u - half, c['at'] - through, z_mm),
             pt(u + half, c['at'] + through, z_mm))
+
+
+def wall_inward(wall):
+    """Sign of 'into the case' along the wall's normal axis."""
+    return -1.0 if wall in ('+X', '+Z') else 1.0
+
+
+def port_frame_plan(c, wall_t, frame_t, margin, z_mm):
+    """Plan footprint of the collar around an opening, on the inner wall face."""
+    half = c['width'] / 2.0 + margin
+    n = wall_inward(c['wall'])
+    a1 = c['at'] + n * wall_t
+    a2 = c['at'] + n * (wall_t + frame_t)
+    lo, hi = min(a1, a2), max(a1, a2)
+    u = c['along']
+    if c['wall'] in ('+X', '-X'):
+        return pt(lo, u - half, z_mm), pt(hi, u + half, z_mm)
+    return pt(u - half, lo, z_mm), pt(u + half, hi, z_mm)
+
+
+def inner_floor_face(body, z_mm, tol_mm=0.4):
+    """The cavity floor: largest flat face at the shell thickness."""
+    at_z = [t for t in horizontal_faces(body)
+            if abs(t[0] - z_mm) <= tol_mm and t[0] > tol_mm]
+    if not at_z:
+        return None
+    return max(at_z, key=lambda t: t[1])[2]
 
 
 def draw_polygon(sketch, points_mm):
@@ -278,9 +330,34 @@ def build(root, prof):
     rm = adsk.core.ObjectCollection.create()
     rm.add(face)
     sh = feats.shellFeatures.createInput(rm, False)
-    sh.insideThickness = vi(prof.WALL_THICKNESS)
+    sh.insideThickness = vs(WALL_PARAM)
     feats.shellFeatures.add(sh)
-    log('shelled at %.2f mm, top open' % prof.WALL_THICKNESS)
+    log('shelled at %s (default %.2f mm), top open'
+        % (WALL_PARAM, prof.WALL_THICKNESS))
+
+    # --- 2b. fillet the inside floor-to-wall junction ----------------------
+    if FILLET_RADIUS_MM > 0:
+        ff = inner_floor_face(body, prof.WALL_THICKNESS)
+        if ff is None:
+            log('fillet skipped: no cavity floor face found')
+        else:
+            edges = adsk.core.ObjectCollection.create()
+            for e in ff.edges:
+                edges.add(e)
+            radius = FILLET_RADIUS_MM
+            while radius >= 0.5:
+                try:
+                    fi = feats.filletFeatures.createInput()
+                    fi.isRollingBallCorner = True
+                    fi.edgeSets.addConstantRadiusEdgeSet(edges, vi(radius), True)
+                    feats.filletFeatures.add(fi)
+                    log('floor-to-wall fillet r=%.2f on %d edges'
+                        % (radius, edges.count))
+                    break
+                except Exception:
+                    radius -= 0.5
+            else:
+                log('fillet failed at every radius; skipped')
 
     # --- 3. rib, sitting on the rim and rising with it ---------------------
     sk_rib = root.sketches.add(plane_at_z(root, rim, 'rib_base'))
@@ -319,6 +396,28 @@ def build(root, prof):
         # Both openings lie within the rib's footprint, so they travel up
         # with it and keep a constant distance below its top edge.
         z_bottom = zc(c['y'] + c['height'] / 2.0)
+        if PORT_FRAMES:
+            fz = z_bottom - PORT_FRAME_MARGIN_MM
+            fp = root.sketches.add(
+                plane_at_expr(root, plus_param(fz), 'frame_%s' % c['name']))
+            fp.name = 'frame_%s' % c['name']
+            f_lo, f_hi = port_frame_plan(
+                c, prof.WALL_THICKNESS, PORT_FRAME_THICKNESS_MM,
+                PORT_FRAME_MARGIN_MM, fz)
+            fp.sketchCurves.sketchLines.addTwoPointRectangle(
+                fp.modelToSketchSpace(f_lo), fp.modelToSketchSpace(f_hi))
+            fpr = largest_profile(fp)
+            if fpr is not None:
+                fe = feats.extrudeFeatures.createInput(
+                    fpr, adsk.fusion.FeatureOperations.JoinFeatureOperation)
+                fe.setOneSideExtent(
+                    extent_dist(c['height'] + 2 * PORT_FRAME_MARGIN_MM),
+                    dir_pos)
+                feats.extrudeFeatures.add(fe)
+                log('frame for %s: %.2f mm thick, %.2f mm margin'
+                    % (c['name'], PORT_FRAME_THICKNESS_MM,
+                       PORT_FRAME_MARGIN_MM))
+
         cp = plane_at_expr(root, plus_param(z_bottom), 'base_%s' % c['name'])
         sk_c = root.sketches.add(cp)
         sk_c.name = 'cutout_%s' % c['name']
@@ -370,7 +469,12 @@ def run(context):
             'Extra case height. Added to the main extrusion and to the height '
             'of each sidewall opening above the case bottom, so the wall band '
             'below the openings grows and everything above it rises with it.')
-        log('user parameter %s ready' % HEIGHT_PARAM)
+        ensure_parameter(
+            design, WALL_PARAM, prof.WALL_THICKNESS,
+            'Shell wall thickness. Torsional stiffness of an open section '
+            'scales with t^3. The shell grows inward, so raising this shrinks '
+            'the cavity by the same amount per side -- check PCB fit.')
+        log('user parameters %s, %s ready' % (HEIGHT_PARAM, WALL_PARAM))
 
         body, made = build(root, prof)
         log('done')

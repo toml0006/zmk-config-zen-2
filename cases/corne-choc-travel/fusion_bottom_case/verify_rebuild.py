@@ -29,6 +29,13 @@ OUT = os.path.join(HERE, 'corne_bottom_case.step')
 # Leave at 0.0 to compare against the source mesh. Override without editing:
 #   EXTRA_HEIGHT=3 freecadcmd verify_rebuild.py
 EXTRA = float(os.environ.get('EXTRA_HEIGHT', '0'))
+
+# Mirrors PORT_FRAMES / PORT_FRAME_* in the Fusion script. The fillet at the
+# floor-to-wall junction is NOT modelled here -- selecting that edge loop is
+# fiddly in FreeCAD and it does not change the checks this script makes.
+FRAMES = os.environ.get('PORT_FRAMES', '1') != '0'
+FRAME_T = 1.2
+FRAME_MARGIN = 2.0
 MESH_VOLUME = 19187.7          # measured on case-bottom-3dp-meshopt.stl
 MESH_BBOX = 'X -134.99..-2.09  Y -12.97..3.53  Z -37.19..51.00'
 
@@ -66,6 +73,24 @@ def build():
     for x, z, r in P.SCREW_HOLES:
         shape = shape.cut(Part.makeCylinder(
             r, 20, Vector(x, L['plate_bottom'] - 5, z), Vector(0, 1, 0)))
+
+    # Reinforcing collars around the openings, added before the holes are cut.
+    if FRAMES:
+        for c in P.CUTOUTS:
+            w = c['width'] / 2.0 + FRAME_MARGIN
+            h = c['height'] + 2 * FRAME_MARGIN
+            y0 = c['y'] - EXTRA - c['height'] / 2 - FRAME_MARGIN
+            n = -1.0 if c['wall'] in ('+X', '+Z') else 1.0
+            a1, a2 = c['at'] + n * T, c['at'] + n * (T + FRAME_T)
+            lo, hi = min(a1, a2), max(a1, a2)
+            if c['wall'] in ('+X', '-X'):
+                box = Part.makeBox(hi - lo, h, 2 * w,
+                                   Vector(lo, y0, c['along'] - w))
+            else:
+                box = Part.makeBox(2 * w, h, hi - lo,
+                                   Vector(c['along'] - w, y0, lo))
+            shape = shape.fuse(box)
+        shape = shape.removeSplitter()
 
     for c in P.CUTOUTS:
         w, h, d = c['width'], c['height'], T * 6
