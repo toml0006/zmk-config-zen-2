@@ -247,8 +247,10 @@ def run(context):
             raise RuntimeError('the new document is not a Design')
         design.designType = adsk.fusion.DesignTypes.ParametricDesignType
         doc.name = 'Corne Choc bottom case'
+        # The root component's name is derived from the document and is not
+        # settable -- assigning it raises "root component name cannot be
+        # changed". The document name above is what shows in the browser.
         root = design.rootComponent
-        root.name = 'BottomCase'
 
         body, made = build(root, prof)
         log('done')
