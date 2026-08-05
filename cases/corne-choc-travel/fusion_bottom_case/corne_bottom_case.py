@@ -33,6 +33,16 @@ import adsk.fusion
 # Fusion's internal unit is cm; every number in the profile module is mm.
 MM = 0.1
 
+# One user parameter. The case grows UPWARD from a fixed bottom, so the extra
+# height lands in the wall band BELOW the sidewall openings, and the openings,
+# the plate and the screw holes all rise with it by the same amount. The case
+# bottom, the shelled underside and the rib stay put.
+#
+# It is a real Fusion user parameter, so after the first run it can be edited
+# in Modify -> Change Parameters and the model rebuilds without re-running.
+HEIGHT_PARAM = 'case_extra_height'
+HEIGHT_DEFAULT_MM = 0.0
+
 
 def log(msg):
     """Write to the Text Commands palette. Never raises."""
@@ -61,6 +71,17 @@ def vi(mm):
     return adsk.core.ValueInput.createByReal(mm * MM)
 
 
+def vs(expr):
+    """ValueInput from an expression string. Fusion parses these against the
+    parameter table, so an expression may reference user parameters by name."""
+    return adsk.core.ValueInput.createByString(expr)
+
+
+def plus_param(mm):
+    """'<mm> mm + <param>' -- a length that tracks the user parameter."""
+    return vs('%.4f mm + %s' % (mm, HEIGHT_PARAM))
+
+
 def pt(x_mm, y_mm, z_mm=0.0):
     return adsk.core.Point3D.create(x_mm * MM, y_mm * MM, z_mm * MM)
 
@@ -81,43 +102,45 @@ def plane_at_z(root, z_mm, name):
     return p
 
 
-def wall_plane(root, axis, at_mm, name):
-    """Vertical construction plane through a wall.
+def plane_at_expr(root, expr, name):
+    """Horizontal construction plane whose offset is an expression, so it
+    tracks the user parameter."""
+    ci = root.constructionPlanes.createInput()
+    ci.setByOffset(root.xYConstructionPlane, expr)
+    p = root.constructionPlanes.add(ci)
+    p.name = name
+    return p
 
-    setByThreePoints wants point *entities* (SketchPoint / ConstructionPoint /
-    BRepVertex), not bare Point3D geometry -- passing Point3D fails validation
-    inside ConstructionPlanes.add. So offset from the relevant base plane
-    instead. The offset sign depends on which way that base plane's normal
-    faces, which is not worth assuming: create the plane, read it back, and if
-    it landed on the wrong side flip the sign and retry.
+
+def ensure_parameter(design, name, default_mm, comment):
+    """Create the user parameter unless it already exists."""
+    existing = design.userParameters.itemByName(name)
+    if existing is not None:
+        return existing
+    return design.userParameters.add(
+        name, vs('%.4f mm' % default_mm), 'mm', comment)
+
+
+def cutout_plan(c, wall_t):
+    """Plan-view footprint of an opening: across the wall, by its width.
+
+    The vertical extent is deliberately NOT in the sketch. It lives in the
+    extrude's start offset and depth, which are real feature parameters and so
+    can be driven by an expression; sketch geometry cannot be without adding
+    driven dimensions. That is what lets the openings ride up with the
+    parameter.
+
+    mesh (X, Z, Y) -> Fusion (X, Y, Z), so a +/-X wall opening spans Fusion X
+    (through the wall) by Fusion Y (its width), and vice versa.
     """
-    base = (root.yZConstructionPlane if axis == 'x'
-            else root.xZConstructionPlane)
-    for sign in (1.0, -1.0):
-        ci = root.constructionPlanes.createInput()
-        ci.setByOffset(base, vi(at_mm * sign))
-        p = root.constructionPlanes.add(ci)
-        g = adsk.core.Plane.cast(p.geometry)
-        got = (g.origin.x if axis == 'x' else g.origin.y) / MM
-        if abs(got - at_mm) < 1e-3:
-            p.name = name
-            return p
-        p.deleteMe()
-    raise RuntimeError('could not place a wall plane at %s=%.3f mm'
-                       % (axis, at_mm))
-
-
-def cutout_corners(c):
-    """The opening's two opposite corners in model space.
-
-    mesh (X, Z, Y) -> Fusion (X, Y, Z), so an opening in a +/-X wall spans
-    Fusion Y and Z, and one in a +/-Z wall spans Fusion X and Z.
-    """
-    w, h = c['width'] / 2.0, c['height'] / 2.0
-    u, v = c['along'], c['y']
+    half = c['width'] / 2.0
+    through = wall_t * 3.0          # comfortably clears the wall both sides
+    u = c['along']
     if c['wall'] in ('+X', '-X'):
-        return pt(c['at'], u - w, v - h), pt(c['at'], u + w, v + h)
-    return pt(u - w, c['at'], v - h), pt(u + w, c['at'], v + h)
+        return (pt(c['at'] - through, u - half),
+                pt(c['at'] + through, u + half))
+    return (pt(u - half, c['at'] - through),
+            pt(u + half, c['at'] + through))
 
 
 def draw_polygon(sketch, points_mm):
@@ -200,7 +223,10 @@ def build(root, prof):
 
     ext = feats.extrudeFeatures.createInput(
         profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-    ext.setOneSideExtent(extent_dist(top - bot), dir_pos)
+    # Grows upward from the fixed bottom sketch plane.
+    ext.setOneSideExtent(
+        adsk.fusion.DistanceExtentDefinition.create(plus_param(top - bot)),
+        dir_pos)
     body = feats.extrudeFeatures.add(ext).bodies.item(0)
     body.name = 'BottomCase'
     log('blank extruded, %d faces' % body.faces.count)
@@ -234,7 +260,10 @@ def build(root, prof):
         log('rib joined')
 
     # --- 4. screw holes through the plate ---------------------------------
-    sk_h = root.sketches.add(plane_at_z(root, top, 'plate_top'))
+    # The plate rises with the parameter, so the hole sketch plane and the cut
+    # depth must follow it or the holes miss the plate.
+    sk_h = root.sketches.add(
+        plane_at_expr(root, plus_param(top), 'plate_top'))
     sk_h.name = 'screw_holes'
     for x, z, r in prof.SCREW_HOLES:
         sk_h.sketchCurves.sketchCircles.addByCenterRadius(pt(x, z), r * MM)
@@ -242,20 +271,22 @@ def build(root, prof):
         hi = feats.extrudeFeatures.createInput(
             all_profiles(sk_h),
             adsk.fusion.FeatureOperations.CutFeatureOperation)
-        hi.setOneSideExtent(extent_dist((top - bot) + 1.0), dir_neg)
+        hi.setOneSideExtent(
+            adsk.fusion.DistanceExtentDefinition.create(
+                plus_param((top - bot) + 1.0)), dir_neg)
         feats.extrudeFeatures.add(hi)
         log('%d screw holes cut' % len(prof.SCREW_HOLES))
 
     # --- 5. wall cutouts ---------------------------------------------------
     made = []
+    # Sketch the openings on the case bottom, so each extrude's start offset is
+    # literally the opening's height above that bottom -- the dimension the
+    # parameter is added to.
+    cut_base = plane_at_z(root, bot, 'case_bottom')
     for c in prof.CUTOUTS:
-        axis = 'x' if c['wall'] in ('+X', '-X') else 'y'
-        cp = wall_plane(root, axis, c['at'], 'wall_%s' % c['name'])
-        sk_c = root.sketches.add(cp)
+        sk_c = root.sketches.add(cut_base)
         sk_c.name = 'cutout_%s' % c['name']
-        # Convert real model-space corners into sketch space rather than
-        # assuming how the plane's local axes line up with the global ones.
-        lo3, hi3 = cutout_corners(c)
+        lo3, hi3 = cutout_plan(c, prof.WALL_THICKNESS)
         sk_c.sketchCurves.sketchLines.addTwoPointRectangle(
             sk_c.modelToSketchSpace(lo3), sk_c.modelToSketchSpace(hi3))
         p = largest_profile(sk_c)
@@ -264,11 +295,18 @@ def build(root, prof):
             continue
         ci = feats.extrudeFeatures.createInput(
             p, adsk.fusion.FeatureOperations.CutFeatureOperation)
-        # Symmetric, so it cuts the wall whichever way the plane faces.
-        ci.setSymmetricExtent(vi(prof.WALL_THICKNESS * 6), True)
+        # Height of the opening's underside above the fixed case bottom, plus
+        # the parameter, so the opening rides up as the wall below it grows.
+        z0 = c['y'] - c['height'] / 2.0 - bot
+        ci.startExtent = adsk.fusion.OffsetStartDefinition.create(
+            plus_param(z0))
+        ci.setOneSideExtent(
+            adsk.fusion.DistanceExtentDefinition.create(
+                vs('%.4f mm' % c['height'])), dir_pos)
         feats.extrudeFeatures.add(ci)
         made.append(c['name'])
-        log('cutout %s cut' % c['name'])
+        log('cutout %s starts %.3f mm + %s above the case bottom'
+            % (c['name'], z0, HEIGHT_PARAM))
 
     return body, made
 
@@ -296,6 +334,13 @@ def run(context):
         # settable -- assigning it raises "root component name cannot be
         # changed". The document name above is what shows in the browser.
         root = design.rootComponent
+
+        ensure_parameter(
+            design, HEIGHT_PARAM, HEIGHT_DEFAULT_MM,
+            'Extra case height. Added to the main extrusion and to the height '
+            'of each sidewall opening above the case bottom, so the wall band '
+            'below the openings grows and everything above it rises with it.')
+        log('user parameter %s ready' % HEIGHT_PARAM)
 
         body, made = build(root, prof)
         log('done')

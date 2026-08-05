@@ -83,6 +83,53 @@ Prefer to skip Fusion scripting? `corne_bottom_case.step` in this folder is
 the verified solid — just `File` → `Open` it. STEP import is not
 license-gated.
 
+## Raising the case: `case_extra_height`
+
+The script creates one Fusion **user parameter**, `case_extra_height`,
+default `0 mm`. After the first run it lives in `Modify` → `Change
+Parameters`, so you can change it there and the model rebuilds — no need to
+re-run the script.
+
+It grows the case **upward from a fixed bottom**. The wall band below the
+sidewall openings gets taller, and the openings, the plate and the screw
+holes all rise by the same amount. The case bottom, the shelled underside
+and the rib stay exactly where they are.
+
+Measured at `case_extra_height = 3 mm`:
+
+| | 0 mm | 3 mm |
+|---|---|---|
+| `usb_port` (Y) | −4.160…−0.260 | −1.160…2.740 |
+| `side_port` (Y) | −6.900…−3.400 | −3.900…−0.400 |
+| bbox Y | −12.96…3.53 | −12.96…**6.53** |
+| volume | 19261.1 mm³ | 21062.7 mm³ |
+
+Bottom fixed, top +3, both openings +3. The volume rises by the skirt band
+area (~600.5 mm²) times the parameter.
+
+`side_port`'s underside sits flush with the case bottom at 0 mm, so raising
+the parameter is what creates a wall band beneath it — the edge count drops
+from 559 to 555 as its lower edge stops coinciding with the case bottom.
+
+### How it is wired
+
+Sketch geometry cannot be driven by an expression without adding driven
+dimensions, so the openings are **not** sketched on the wall face. Each one
+is sketched as a plan-view footprint on the case bottom and cut upward, with
+its vertical position in the extrude's `startExtent` and its height in the
+extrude depth. Those are real feature parameters, so both can reference
+`case_extra_height`.
+
+The same applies to the main extrusion height, the plate-top sketch plane and
+the screw-hole cut depth — the last two must track the top, or the holes miss
+the plate.
+
+To check a value without opening Fusion:
+
+```
+EXTRA_HEIGHT=3 /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd verify_rebuild.py
+```
+
 ## Editing cutouts
 
 Edit `CUTOUTS` in `typeractive_bottom_profile.py` and re-run:
