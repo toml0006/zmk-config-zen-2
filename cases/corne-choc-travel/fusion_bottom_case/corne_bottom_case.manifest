@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "jackson",
+    "description": {
+        "": "Parametric rebuild of the Typeractive Corne Choc bottom case, with editable wall cutouts."
+    },
+    "supportedOS": "windows|mac",
+    "editor": "vscode"
+}

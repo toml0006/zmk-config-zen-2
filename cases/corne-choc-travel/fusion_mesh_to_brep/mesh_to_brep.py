@@ -138,9 +138,24 @@ def convert_mesh(root, mesh_body):
         coll.add(mesh_body)
         cv_input = feats.createInput(coll)
 
-    cv_input.meshConvertMethodType = CONVERT_METHODS[PARAMS['method']]
+    # Prismatic and Organic conversion are subscription-gated. On a Personal
+    # Use license the setter raises "No rights for mesh conversion" before any
+    # geometry work happens. Fall back so the run still produces something,
+    # and say plainly what was lost.
+    gated = None
+    for name in (PARAMS['method'], 'faceted'):
+        try:
+            cv_input.meshConvertMethodType = CONVERT_METHODS[name]
+            used = name
+            break
+        except RuntimeError as exc:
+            if 'rights' not in str(exc).lower():
+                raise
+            gated = str(exc).strip()
+    else:
+        raise RuntimeError('no permitted conversion method: %s' % gated)
 
-    if PARAMS['method'] == 'organic':
+    if used == 'organic':
         cv_input.meshConvertResolutionType = \
             adsk.fusion.MeshConvertResolutionTypes.ByAccuracyMeshConvertResolutionType
         cv_input.meshConvertAccuracyType = \
@@ -152,6 +167,7 @@ def convert_mesh(root, mesh_body):
         adsk.fusion.MeshConvertOperationTypes.BaseFeatureMeshConvertOperationType)
 
     feats.add(cv_input)
+    return used, gated
 
 
 def run(context):
@@ -195,7 +211,7 @@ def run(context):
         if PARAMS['generate_face_groups'] and PARAMS['method'] != 'faceted':
             generate_face_groups(root, mesh_body)
 
-        convert_mesh(root, mesh_body)
+        used, gated = convert_mesh(root, mesh_body)
         adsk.doEvents()
 
         solids = [b for b in root.bRepBodies if b.isSolid]
@@ -218,7 +234,7 @@ def run(context):
             '  volume:  %.1f mm^3\n\n'
             'Body is a solid — push/pull faces, add sketches and fillets as '
             'usual. Export via File -> Export -> STEP.'
-            % (name, PARAMS['method'], facets, body.faces.count,
+            % (name, used, facets, body.faces.count,
                body.edges.count, body.volume * 1000.0))
 
     except Exception:
