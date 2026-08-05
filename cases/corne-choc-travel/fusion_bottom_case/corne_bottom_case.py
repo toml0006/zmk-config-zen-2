@@ -121,7 +121,7 @@ def ensure_parameter(design, name, default_mm, comment):
         name, vs('%.4f mm' % default_mm), 'mm', comment)
 
 
-def cutout_plan(c, wall_t):
+def cutout_plan(c, wall_t, z_mm):
     """Plan-view footprint of an opening: across the wall, by its width.
 
     The vertical extent is deliberately NOT in the sketch. It lives in the
@@ -137,10 +137,10 @@ def cutout_plan(c, wall_t):
     through = wall_t * 3.0          # comfortably clears the wall both sides
     u = c['along']
     if c['wall'] in ('+X', '-X'):
-        return (pt(c['at'] - through, u - half),
-                pt(c['at'] + through, u + half))
-    return (pt(u - half, c['at'] - through),
-            pt(u + half, c['at'] + through))
+        return (pt(c['at'] - through, u - half, z_mm),
+                pt(c['at'] + through, u + half, z_mm))
+    return (pt(u - half, c['at'] - through, z_mm),
+            pt(u + half, c['at'] + through, z_mm))
 
 
 def draw_polygon(sketch, points_mm):
@@ -279,14 +279,17 @@ def build(root, prof):
 
     # --- 5. wall cutouts ---------------------------------------------------
     made = []
-    # Sketch the openings on the case bottom, so each extrude's start offset is
-    # literally the opening's height above that bottom -- the dimension the
-    # parameter is added to.
-    cut_base = plane_at_z(root, bot, 'case_bottom')
+    # Each opening gets its own construction plane at its underside, placed by
+    # an expression so it tracks the parameter. Deliberately NOT done with
+    # ExtrudeFeatureInput.startExtent: setOneSideExtent rebuilds the extent
+    # definition and discards a previously assigned startExtent, which silently
+    # dropped both the opening's height and the parameter with it.
     for c in prof.CUTOUTS:
-        sk_c = root.sketches.add(cut_base)
+        z_bottom = c['y'] - c['height'] / 2.0
+        cp = plane_at_expr(root, plus_param(z_bottom), 'base_%s' % c['name'])
+        sk_c = root.sketches.add(cp)
         sk_c.name = 'cutout_%s' % c['name']
-        lo3, hi3 = cutout_plan(c, prof.WALL_THICKNESS)
+        lo3, hi3 = cutout_plan(c, prof.WALL_THICKNESS, z_bottom)
         sk_c.sketchCurves.sketchLines.addTwoPointRectangle(
             sk_c.modelToSketchSpace(lo3), sk_c.modelToSketchSpace(hi3))
         p = largest_profile(sk_c)
@@ -295,18 +298,13 @@ def build(root, prof):
             continue
         ci = feats.extrudeFeatures.createInput(
             p, adsk.fusion.FeatureOperations.CutFeatureOperation)
-        # Height of the opening's underside above the fixed case bottom, plus
-        # the parameter, so the opening rides up as the wall below it grows.
-        z0 = c['y'] - c['height'] / 2.0 - bot
-        ci.startExtent = adsk.fusion.OffsetStartDefinition.create(
-            plus_param(z0))
-        ci.setOneSideExtent(
-            adsk.fusion.DistanceExtentDefinition.create(
-                vs('%.4f mm' % c['height'])), dir_pos)
+        # Straight upward cut of exactly the opening's height, starting on
+        # its own plane. No start offset involved.
+        ci.setOneSideExtent(extent_dist(c['height']), dir_pos)
         feats.extrudeFeatures.add(ci)
         made.append(c['name'])
-        log('cutout %s starts %.3f mm + %s above the case bottom'
-            % (c['name'], z0, HEIGHT_PARAM))
+        log('cutout %s: underside at %.3f mm + %s, height %.3f mm'
+            % (c['name'], z_bottom, HEIGHT_PARAM, c['height']))
 
     return body, made
 
