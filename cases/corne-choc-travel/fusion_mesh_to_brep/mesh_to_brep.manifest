@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "jackson",
+    "description": {
+        "": "Import an STL/OBJ/3MF and convert it to an editable B-Rep solid via Fusion's Prismatic mesh conversion."
+    },
+    "supportedOS": "windows|mac",
+    "editor": "vscode"
+}
