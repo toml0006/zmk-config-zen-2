@@ -207,25 +207,55 @@ most of that wall's local shear path. The collars put some back. Measured:
 entirely internal. They protrude 1.2 mm inward, so check clearance against the
 PCB and the connectors; `PORT_FRAMES = False` removes them.
 
-### The one thing not done: closing the section
+### Closing the section: bosses and webs
 
-The obvious shear panel is the PCB, but the Corne Chocolate is a
-**plate-mount** board. `reference_corne-chocolate.kicad_pcb` has no
-`MountingHole` footprints at all — its only circular `Edge.Cuts` features are
-12 × Ø5.00 mm pass-throughs, and its `np_thru_hole` pads are 0.5 mm breakaway
-tab perforations. There is nothing to bolt perimeter bosses to.
+The PCB bolts down to the five holes in the floor, so it already acts as a
+partial shear panel. The limit is not the screws — it is that the holes sit
+well inboard, so the wall can only reach a screw by **bending the floor**
+across that gap:
 
-So closing the section needs one of:
+| screw hole (x, z) | distance to nearest wall |
+|---|---|
+| (−113.769, 7.730) | 19.44 mm |
+| (−113.769, 24.731) | 19.23 mm |
+| (−72.867, −6.970) | 7.31 mm |
+| (−41.773, 28.133) | 18.18 mm |
+| (−28.365, −13.571) | 16.58 mm |
 
-- **a redesigned plate** with fastener holes near the walls (corners first —
-  that is where shear flow transfers), bolting down to new bosses here;
-- **an internal ledge** around the inner wall at plate height, capturing the
-  plate laterally around its full perimeter. This needs no fasteners and no
-  PCB changes, and continuous lateral bearing transfers shear better than a
-  few point bolts. It does need the plate outline, to keep the fit;
-- **a diagonal brace** across the opening, if the top must stay open. Diagonals
-  load in tension/compression rather than bending, so they beat orthogonal
-  ribs by a wide margin.
+Mean 16.1 mm, and 5 fasteners on a 405 mm perimeter is ~81 mm spacing.
+
+So each boss is **webbed to the nearest point on the wall**. The web converts
+that bending cantilever into a shear web, which is stiff in-plane rather than
+in bending. Nearest points are computed from `PLATE_OUTLINE` at build time —
+no PCB data needed, since the hole positions came from the STL itself.
+
+| knob | default | meaning |
+|---|---|---|
+| `BOSSES` | `True` | bosses at the five screw positions |
+| `BOSS_DIAMETER_MM` | 6.0 | outer diameter (1.76 mm wall around a Ø2.47 hole) |
+| `BOSS_HEIGHT_MM` | `None` | `None` = up to the rim, so the plate lands on them |
+| `WEBS` | `True` | web each boss to the nearest wall |
+| `WEB_THICKNESS_MM` | 1.6 | web thickness |
+
+Measured: +1947 mm³, 206 → 241 faces, **bounding box unchanged** (all
+internal). The screw-hole cut is deepened automatically to clear the bosses.
+
+**Check `BOSS_HEIGHT_MM` against your build.** `None` runs them to the rim, on
+the assumption that the plate lands there. If the PCB sits lower — the stock
+case uses separate spacers — set it to the real spacer length, or set
+`BOSSES = False` to keep using spacers.
+
+### A note on the reference PCB
+
+`../reference_corne-chocolate.kicad_pcb` is the **panelized foostan crkbd**
+pulled in only to trace the outline. It is not the Typeractive board. It has
+no `MountingHole` footprints; its Ø5.00 mm `Edge.Cuts` circles are controller
+cutouts and its only M2-sized (r=1.000) arcs sit at x = ±137.6, the panel
+edges — tooling holes. Neither set matches this case's five holes (pairwise
+distance error 99.7 mm and 114.1 mm respectively).
+
+Do not use that file to place mounting features. The five hole positions in
+`SCREW_HOLES` were measured from the Typeractive STL and are correct.
 
 ## Editing cutouts
 

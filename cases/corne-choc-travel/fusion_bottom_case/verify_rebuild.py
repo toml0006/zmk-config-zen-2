@@ -33,6 +33,10 @@ EXTRA = float(os.environ.get('EXTRA_HEIGHT', '0'))
 # Mirrors PORT_FRAMES / PORT_FRAME_* in the Fusion script. The fillet at the
 # floor-to-wall junction is NOT modelled here -- selecting that edge loop is
 # fiddly in FreeCAD and it does not change the checks this script makes.
+BOSSES = os.environ.get('BOSSES', '1') != '0'
+BOSS_D = 6.0
+WEBS = True
+WEB_T = 1.6
 FRAMES = os.environ.get('PORT_FRAMES', '1') != '0'
 FRAME_T = 1.2
 FRAME_MARGIN = 2.0
@@ -43,6 +47,23 @@ MESH_BBOX = 'X -134.99..-2.09  Y -12.97..3.53  Z -37.19..51.00'
 def face_at(points, y):
     vs = [Vector(x, y, z) for x, z in points]
     return Part.Face(Part.makePolygon(vs + [vs[0]]))
+
+
+def nearest_on_polygon(points, x, z):
+    best = None
+    n = len(points)
+    for i in range(n):
+        ax, az = points[i]
+        bx, bz = points[(i + 1) % n]
+        dx, dz = bx - ax, bz - az
+        L2 = dx * dx + dz * dz
+        t = 0.0 if L2 == 0 else max(0.0, min(1.0,
+                                             ((x - ax) * dx + (z - az) * dz) / L2))
+        px, pz = ax + t * dx, az + t * dz
+        d = ((x - px) ** 2 + (z - pz) ** 2) ** 0.5
+        if best is None or d < best[0]:
+            best = (d, px, pz)
+    return best
 
 
 def build():
@@ -70,9 +91,31 @@ def build():
 
     shape = plate.fuse(skirt).fuse(rib).removeSplitter()
 
+    # Bosses at the screw positions, each webbed to the nearest wall. In the
+    # mesh frame these run DOWN from the floor to the rim.
+    if BOSSES:
+        top, bot = L['plate_bottom'], skirt_bottom
+        for x, z, r in P.SCREW_HOLES:
+            shape = shape.fuse(Part.makeCylinder(
+                BOSS_D / 2.0, top - bot, Vector(x, bot, z), Vector(0, 1, 0)))
+            if WEBS:
+                d, px, pz = nearest_on_polygon(P.PLATE_OUTLINE, x, z)
+                if d < 1e-6:
+                    continue
+                ux, uz = (px - x) / d, (pz - z) / d
+                nx, nz = -uz * WEB_T / 2.0, ux * WEB_T / 2.0
+                ex, ez = x + ux * (d + 1.0), z + uz * (d + 1.0)
+                quad = [(x + nx, z + nz), (ex + nx, ez + nz),
+                        (ex - nx, ez - nz), (x - nx, z - nz)]
+                vs = [Vector(a, bot, b) for a, b in quad]
+                web = Part.Face(Part.makePolygon(vs + [vs[0]])).extrude(
+                    Vector(0, top - bot, 0))
+                shape = shape.fuse(web)
+        shape = shape.removeSplitter()
+
     for x, z, r in P.SCREW_HOLES:
         shape = shape.cut(Part.makeCylinder(
-            r, 20, Vector(x, L['plate_bottom'] - 5, z), Vector(0, 1, 0)))
+            r, 30, Vector(x, skirt_bottom - 2, z), Vector(0, 1, 0)))
 
     # Reinforcing collars around the openings, added before the holes are cut.
     if FRAMES:

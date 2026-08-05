@@ -23,6 +23,7 @@ Text Commands palette (View -> Show Text Commands).
 """
 
 import importlib
+import math
 import os
 import sys
 import traceback
@@ -80,6 +81,20 @@ WALL_PARAM = 'wall_thickness'
 #    PCB and connectors. Set PORT_FRAMES = False to drop them.
 #    Frames are baked at the script's wall thickness -- changing wall_thickness
 #    in Change Parameters afterwards does not move them; re-run instead.
+# 1. Bosses at the five PCB screw positions, each webbed to the nearest wall.
+#    The PCB bolts to these, so it acts as a shear panel -- but the holes sit
+#    7.3..19.4 mm inboard (mean 16.1), so without a web the wall reaches the
+#    screw only by BENDING the floor across that gap. The web turns that
+#    cantilever into a shear web.
+#    BOSS_HEIGHT_MM = None means "up to the rim", i.e. the plate lands on them.
+#    Set it to the real spacer length if the PCB sits lower, or set BOSSES to
+#    False to keep using separate spacers.
+BOSSES = True
+BOSS_DIAMETER_MM = 6.0
+BOSS_HEIGHT_MM = None
+WEBS = True
+WEB_THICKNESS_MM = 1.6
+
 PORT_FRAMES = True
 PORT_FRAME_THICKNESS_MM = 1.2
 PORT_FRAME_MARGIN_MM = 2.0
@@ -208,6 +223,24 @@ def port_frame_plan(c, wall_t, frame_t, margin, z_mm):
     if c['wall'] in ('+X', '-X'):
         return pt(lo, u - half, z_mm), pt(hi, u + half, z_mm)
     return pt(u - half, lo, z_mm), pt(u + half, hi, z_mm)
+
+
+def nearest_on_polygon(points, x, z):
+    """Closest point on a closed polyline. Pure Python -- no shapely inside
+    Fusion. Returns (distance, px, pz)."""
+    best = None
+    n = len(points)
+    for i in range(n):
+        ax, az = points[i]
+        bx, bz = points[(i + 1) % n]
+        dx, dz = bx - ax, bz - az
+        L2 = dx * dx + dz * dz
+        t = 0.0 if L2 == 0 else max(0.0, min(1.0, ((x - ax) * dx + (z - az) * dz) / L2))
+        px, pz = ax + t * dx, az + t * dz
+        d = math.hypot(x - px, z - pz)
+        if best is None or d < best[0]:
+            best = (d, px, pz)
+    return best
 
 
 def inner_floor_face(body, z_mm, tol_mm=0.4):
@@ -375,6 +408,41 @@ def build(root, prof):
         log('rib joined, %.3f mm + %s tall, top at %.3f mm + %s'
             % (rib_top - rim, HEIGHT_PARAM, rib_top, HEIGHT_PARAM))
 
+    # --- 3b. bosses at the screw positions, webbed to the nearest wall -----
+    boss_top = rim if BOSS_HEIGHT_MM is None else BOSS_HEIGHT_MM
+    if BOSSES and prof.SCREW_HOLES:
+        floor_top = prof.WALL_THICKNESS
+        sk_b = root.sketches.add(plane_at_z(root, floor_top, 'boss_base'))
+        sk_b.name = 'bosses'
+        for x, z, r in prof.SCREW_HOLES:
+            sk_b.sketchCurves.sketchCircles.addByCenterRadius(
+                pt(x, z), (BOSS_DIAMETER_MM / 2.0) * MM)
+        if WEBS:
+            lines = sk_b.sketchCurves.sketchLines
+            for x, z, r in prof.SCREW_HOLES:
+                d, px, pz = nearest_on_polygon(prof.PLATE_OUTLINE, x, z)
+                if d < 1e-6:
+                    continue
+                ux, uz = (px - x) / d, (pz - z) / d
+                # half-width across the web, and run a little into the wall
+                nx, nz = -uz * WEB_THICKNESS_MM / 2.0, ux * WEB_THICKNESS_MM / 2.0
+                ex, ez = x + ux * (d + 1.0), z + uz * (d + 1.0)
+                quad = [(x + nx, z + nz), (ex + nx, ez + nz),
+                        (ex - nx, ez - nz), (x - nx, z - nz)]
+                for i in range(4):
+                    lines.addByTwoPoints(pt(*quad[i]), pt(*quad[(i + 1) % 4]))
+        prof_b = adsk.core.ObjectCollection.create()
+        for pr in sk_b.profiles:
+            prof_b.add(pr)
+        if prof_b.count:
+            be = feats.extrudeFeatures.createInput(
+                prof_b, adsk.fusion.FeatureOperations.JoinFeatureOperation)
+            be.setOneSideExtent(extent_dist(boss_top - floor_top), dir_pos)
+            feats.extrudeFeatures.add(be)
+            log('%d bosses d=%.1f to z=%.2f%s'
+                % (len(prof.SCREW_HOLES), BOSS_DIAMETER_MM, boss_top,
+                   ', webbed to the wall' if WEBS else ''))
+
     # --- 4. screw holes through the floor ----------------------------------
     # The floor does not move, so these need no parameter.
     sk_h = root.sketches.add(plane_at_z(root, floor_bottom, 'floor_holes'))
@@ -385,9 +453,11 @@ def build(root, prof):
         hi = feats.extrudeFeatures.createInput(
             all_profiles(sk_h),
             adsk.fusion.FeatureOperations.CutFeatureOperation)
-        hi.setOneSideExtent(extent_dist(floor_thickness + 1.0), dir_pos)
+        # Deep enough to clear the bosses as well as the floor.
+        depth = (boss_top if BOSSES else floor_thickness) + 1.0
+        hi.setOneSideExtent(extent_dist(depth), dir_pos)
         feats.extrudeFeatures.add(hi)
-        log('%d screw holes cut through the floor' % len(prof.SCREW_HOLES))
+        log('%d screw holes cut %.2f mm deep' % (len(prof.SCREW_HOLES), depth))
 
     # --- 5. wall openings ---------------------------------------------------
     made = []
