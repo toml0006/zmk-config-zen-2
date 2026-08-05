@@ -52,8 +52,32 @@ model — add them as Fusion fillets if you want them.
 Fusion → `Utilities` → `Add-Ins` → `Scripts and Add-Ins` (`Shift + S`) →
 `My Scripts` → `corne_bottom_case` → `Run`.
 
-Already symlinked into Fusion's `API/Scripts`, so edits here apply on the
-next run.
+### How it is installed
+
+`API/Scripts/corne_bottom_case/` is a **real folder** holding a small
+launcher shim, not a symlink to this repo. Two reasons:
+
+- Fusion does not reliably follow symlinked script folders.
+- The manifest must say `"autodeskProduct": "Fusion"`. The renamed *Autodesk
+  Fusion* build filters out entries that still say `"Fusion360"`, which makes
+  a script look listed but do nothing when run.
+
+The shim loads `corne_bottom_case.py` from this repo by absolute path and
+re-executes it every run, so this folder stays the source of truth and edits
+apply immediately — including edits to `CUTOUTS`.
+
+### If nothing happens
+
+The script always ends in a dialog, success or failure, so silence means it
+never loaded. Check, in order:
+
+1. `View` → `Show Text Commands`. Every step logs a `[corne_bottom_case]`
+   line; the last one tells you how far it got.
+2. Confirm `corne_bottom_case` is listed under `My Scripts`. If not, click
+   `+` and select `API/Scripts/corne_bottom_case`.
+3. Confirm the manifest says `"autodeskProduct": "Fusion"`.
+
+Or skip scripting entirely and open `corne_bottom_case.step`.
 
 Prefer to skip Fusion scripting? `corne_bottom_case.step` in this folder is
 the verified solid — just `File` → `Open` it. STEP import is not
