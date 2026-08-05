@@ -82,18 +82,42 @@ def plane_at_z(root, z_mm, name):
 
 
 def wall_plane(root, axis, at_mm, name):
-    """Vertical construction plane through a wall, pinned by three explicit
-    points so its position never depends on a normal-direction convention.
-    Cutout rectangles are centred, so a mirrored local frame is harmless."""
-    if axis == 'x':
-        p1, p2, p3 = pt(at_mm, 0, 0), pt(at_mm, 10, 0), pt(at_mm, 0, 10)
-    else:
-        p1, p2, p3 = pt(0, at_mm, 0), pt(10, at_mm, 0), pt(0, at_mm, 10)
-    ci = root.constructionPlanes.createInput()
-    ci.setByThreePoints(p1, p2, p3)
-    p = root.constructionPlanes.add(ci)
-    p.name = name
-    return p
+    """Vertical construction plane through a wall.
+
+    setByThreePoints wants point *entities* (SketchPoint / ConstructionPoint /
+    BRepVertex), not bare Point3D geometry -- passing Point3D fails validation
+    inside ConstructionPlanes.add. So offset from the relevant base plane
+    instead. The offset sign depends on which way that base plane's normal
+    faces, which is not worth assuming: create the plane, read it back, and if
+    it landed on the wrong side flip the sign and retry.
+    """
+    base = (root.yZConstructionPlane if axis == 'x'
+            else root.xZConstructionPlane)
+    for sign in (1.0, -1.0):
+        ci = root.constructionPlanes.createInput()
+        ci.setByOffset(base, vi(at_mm * sign))
+        p = root.constructionPlanes.add(ci)
+        g = adsk.core.Plane.cast(p.geometry)
+        got = (g.origin.x if axis == 'x' else g.origin.y) / MM
+        if abs(got - at_mm) < 1e-3:
+            p.name = name
+            return p
+        p.deleteMe()
+    raise RuntimeError('could not place a wall plane at %s=%.3f mm'
+                       % (axis, at_mm))
+
+
+def cutout_corners(c):
+    """The opening's two opposite corners in model space.
+
+    mesh (X, Z, Y) -> Fusion (X, Y, Z), so an opening in a +/-X wall spans
+    Fusion Y and Z, and one in a +/-Z wall spans Fusion X and Z.
+    """
+    w, h = c['width'] / 2.0, c['height'] / 2.0
+    u, v = c['along'], c['y']
+    if c['wall'] in ('+X', '-X'):
+        return pt(c['at'], u - w, v - h), pt(c['at'], u + w, v + h)
+    return pt(u - w, c['at'], v - h), pt(u + w, c['at'], v + h)
 
 
 def draw_polygon(sketch, points_mm):
@@ -229,10 +253,11 @@ def build(root, prof):
         cp = wall_plane(root, axis, c['at'], 'wall_%s' % c['name'])
         sk_c = root.sketches.add(cp)
         sk_c.name = 'cutout_%s' % c['name']
-        u, v = c['along'], c['y']
-        w, h = c['width'] / 2.0, c['height'] / 2.0
+        # Convert real model-space corners into sketch space rather than
+        # assuming how the plane's local axes line up with the global ones.
+        lo3, hi3 = cutout_corners(c)
         sk_c.sketchCurves.sketchLines.addTwoPointRectangle(
-            pt(u - w, v - h), pt(u + w, v + h))
+            sk_c.modelToSketchSpace(lo3), sk_c.modelToSketchSpace(hi3))
         p = largest_profile(sk_c)
         if p is None:
             log('cutout %s: no profile, skipped' % c['name'])
