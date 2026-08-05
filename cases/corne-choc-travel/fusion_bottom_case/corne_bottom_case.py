@@ -33,10 +33,12 @@ import adsk.fusion
 # Fusion's internal unit is cm; every number in the profile module is mm.
 MM = 0.1
 
-# One user parameter, driving three features: the height of the main
-# extrusion, and the height of each sidewall opening above the case bottom.
-# Raising it deepens the case upward while carrying the ports with it, so the
-# ports keep their position relative to the plate and the PCB.
+# One user parameter. It lengthens the case upward from a fixed bottom, so
+# the extra height lands entirely in the partial wall ABOVE the sidewall
+# openings. The openings and the wall below them do not move.
+#
+# It drives the main extrusion height, and with it the plate-top plane and the
+# screw-hole cut depth, which must follow the top or the holes miss the plate.
 DEPTH_PARAM = 'case_extra_depth'
 DEPTH_DEFAULT_MM = 0.0
 
@@ -284,17 +286,21 @@ def build(root, prof):
             continue
         ci = feats.extrudeFeatures.createInput(
             p, adsk.fusion.FeatureOperations.CutFeatureOperation)
-        # Bottom of the opening, measured up from the case bottom. This is the
-        # dimension the parameter is added to.
+        # Bottom of the opening, measured up from the case bottom, which is
+        # fixed. Deliberately NOT offset by the parameter: adding it here
+        # moves the opening up with the top, which grows the wall BELOW the
+        # opening and leaves the wall above it unchanged -- the opposite of
+        # what the parameter is for. It would also close off side_port, whose
+        # bottom is flush with the case bottom.
         z0 = c['y'] - c['height'] / 2.0 - bot
         ci.startExtent = adsk.fusion.OffsetStartDefinition.create(
-            vs('%.4f mm + %s' % (z0, DEPTH_PARAM)))
+            vs('%.4f mm' % z0))
         ci.setOneSideExtent(
             adsk.fusion.DistanceExtentDefinition.create(
                 vs('%.4f mm' % c['height'])), dir_pos)
         feats.extrudeFeatures.add(ci)
         made.append(c['name'])
-        log('cutout %s cut at %.3f mm above the case bottom' % (c['name'], z0))
+        log('cutout %s at %.3f mm above the fixed case bottom' % (c['name'], z0))
 
     return body, made
 

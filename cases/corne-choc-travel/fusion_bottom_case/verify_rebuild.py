@@ -22,9 +22,9 @@ import typeractive_bottom_profile as P
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, 'corne_bottom_case.step')
-# Mirrors the case_extra_depth user parameter in the Fusion script. Raises
-# the top of the case, carrying the plate and both openings with it, so the
-# ports keep their position relative to the plate while the interior deepens.
+# Mirrors the case_extra_depth user parameter in the Fusion script. Raises the
+# top of the case only. The openings and the wall below them stay put, so the
+# extra height lands entirely in the partial wall above each opening.
 # Leave at 0.0 to compare against the source mesh. Override for a quick check
 # without editing: EXTRA_DEPTH=3 freecadcmd verify_rebuild.py
 EXTRA_DEPTH = float(os.environ.get('EXTRA_DEPTH', '0'))
@@ -61,7 +61,7 @@ def build():
 
     for c in P.CUTOUTS:
         w, h, d = c['width'], c['height'], T * 6
-        y0 = c['y'] - h / 2 + EXTRA_DEPTH
+        y0 = c['y'] - h / 2          # fixed; only the top moves
         if c['wall'] in ('+X', '-X'):
             box = Part.makeBox(d, h, w, Vector(
                 c['at'] - d / 2, y0, c['along'] - w / 2))
@@ -87,5 +87,13 @@ print('mesh    : vol %.1f mm3  ->  delta %+.1f mm3 (%+.2f%%)'
 print('bbox    : X %.2f..%.2f  Y %.2f..%.2f  Z %.2f..%.2f'
       % (bb.XMin, bb.XMax, bb.YMin, bb.YMax, bb.ZMin, bb.ZMax))
 print('mesh    : %s' % MESH_BBOX)
+print('\nwall strips around each opening (mm):')
+print('  %-11s %8s %8s %8s' % ('cutout', 'below', 'opening', 'above'))
+for c in P.CUTOUTS:
+    h = c['height']
+    below = (c['y'] - h / 2) - P.LEVELS['skirt_bottom']
+    above = (P.LEVELS['plate_bottom'] + EXTRA_DEPTH) - (c['y'] + h / 2)
+    print('  %-11s %8.3f %8.3f %8.3f' % (c['name'], below, h, above))
+
 shape.exportStep(OUT)
 print('wrote %s' % OUT)

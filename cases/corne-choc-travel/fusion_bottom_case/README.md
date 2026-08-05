@@ -120,31 +120,42 @@ before opening Fusion.
 A Fusion **user parameter** (`Modify` → `Change Parameters`), default `0 mm`.
 Change it there and the model rebuilds — no need to re-run the script.
 
-One parameter, three features:
+It lengthens the case upward from a fixed bottom, so **the extra height lands
+entirely in the partial wall above the sidewall openings**. The openings, and
+the wall below them, do not move.
 
-| Feature | Effect |
-|---|---|
-| main extrusion | height + `case_extra_depth` |
-| `cutout_usb_port` | start offset above the case bottom + `case_extra_depth` |
-| `cutout_side_port` | same |
+| P | wall below | opening | wall above |
+|---|---|---|---|
+| 0 | 2.740 | 3.900 | 2.294 |
+| 3 | 2.740 | 3.900 | 5.294 |
 
-The case bottom stays put and the top rises, carrying the plate and both
-openings with it. So the interior gets deeper while the ports keep their
-position relative to the plate and the PCB — and each opening's height above
-the case bottom grows by exactly the parameter.
+(`usb_port`. `verify_rebuild.py` prints this table for every opening.)
 
-The plate-top construction plane and the screw-hole cut depth also track the
-parameter. They have to: the top moves, and holes sketched at the old height
-would miss the plate.
+### What it drives
+
+The main extrusion's height, and with it the plate-top construction plane and
+the screw-hole cut depth. Those two must follow the top — holes sketched at
+the old height would miss the plate.
+
+The openings deliberately do **not** reference it. Their start offset is
+measured from the fixed case bottom.
+
+> Earlier this parameter was also added to each opening's height above the
+> case bottom, on the reading that it should drive three operations. That is
+> the opposite of what is wanted: it carries the openings up with the top, so
+> the wall *below* each opening grows and the wall above is unchanged. It also
+> closed off `side_port`, whose bottom is flush with the case bottom
+> (below = 0.000). Openings now stay put.
 
 ### Why the openings are modelled the way they are
 
 Each opening is a **horizontal** plan rectangle extruded vertically, not a
 rectangle drawn on the wall. A wall sketch puts the opening's height into
-sketch geometry, and sketch points are dumb coordinates — they cannot follow
-a parameter without adding driven dimensions. Extruding vertically instead
-moves the height into the extrude's `startExtent` offset and its depth, both
-real feature parameters that accept expressions.
+sketch geometry, and sketch points are dumb coordinates — they cannot follow a
+parameter without driven dimensions. Extruding vertically instead moves the
+height into the extrude's `startExtent` offset and depth, both real feature
+parameters that accept expressions. That is what makes the height above the
+case bottom an explicit, inspectable number.
 
 ### Checking it outside Fusion
 
@@ -155,13 +166,13 @@ EXTRA_DEPTH=3 /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd verify
 ```
 
 ```
-EXTRA_DEPTH   volume        bbox Y
-0             19261.1 mm3   -12.96 .. 3.53
-3             21062.7 mm3   -12.96 .. 6.53
+EXTRA_DEPTH   volume        bbox Y            usb_port below/above
+0             19261.1 mm3   -12.96 .. 3.53    2.740 / 2.294
+3             21062.7 mm3   -12.96 .. 6.53    2.740 / 5.294
 ```
 
-Top rises by exactly 3 mm, bottom unmoved, still a valid solid. The +1801.6
-mm3 matches the 601.8 mm2 skirt band times 3 mm, less the extra cutout.
+Top rises by exactly 3 mm, bottom unmoved, still a valid solid, and the growth
+is entirely above the opening.
 
 ## Coordinates
 
