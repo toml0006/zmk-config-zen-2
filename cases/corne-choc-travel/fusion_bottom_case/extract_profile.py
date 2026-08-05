@@ -36,9 +36,9 @@ SIMPLIFY = 0.04
 
 CUTOUTS = [
     dict(name='usb_port',  wall='+X', at=-2.087, along=1.960,
-         width=16.00, y=-2.21, height=3.90),
+         width=16.00, y=-4.95, height=3.90),
     dict(name='side_port', wall='+Z', at=45.500, along=-13.990,
-         width=10.95, y=-5.15, height=3.50),
+         width=10.95, y=-7.89, height=3.50),
 ]
 
 

@@ -59,12 +59,13 @@ HEIGHT_DEFAULT_MM = 0.0
 #   usb_port  z 3.792 .. 7.692        (2.740 below the rim)
 #   side_port z 6.932 .. 10.432       (flush with the rim -- a notch)
 
-# Which end the openings are pinned to as the wall grows.
-#   'rim'   -> openings keep their distance below the rim and travel up with
-#              it; the wall band BELOW them grows.
-#   'floor' -> openings keep their height above the floor; the wall band
-#              ABOVE them grows.
-OPENING_ANCHOR = 'rim'
+# What the parameter drives: the height of the RIB only -- the L-shaped taller
+# wall run at the +X end, RIB_OUTLINE. The main perimeter wall, the floor and
+# the screw holes do not move.
+#
+# Both openings sit inside the rib's footprint in plan (side_port on the +Z
+# wall at X -19.5..-8.5, usb_port on the +X wall at Z -6.0..10.0), so they
+# travel up with it and keep a constant distance below the rib's top edge.
 
 
 def log(msg):
@@ -261,13 +262,11 @@ def build(root, prof):
 
     ext = feats.extrudeFeatures.createInput(
         profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-    # The floor stays on the build plate; the wall grows upward.
-    ext.setOneSideExtent(
-        adsk.fusion.DistanceExtentDefinition.create(plus_param(rim)), dir_pos)
+    # Fixed height. Only the rib grows with the parameter.
+    ext.setOneSideExtent(extent_dist(rim), dir_pos)
     body = feats.extrudeFeatures.add(ext).bodies.item(0)
     body.name = 'BottomCase'
-    log('blank extruded to rim %.3f mm + %s, %d faces'
-        % (rim, HEIGHT_PARAM, body.faces.count))
+    log('blank extruded to rim %.3f mm, %d faces' % (rim, body.faces.count))
 
     # --- 2. shell, opening the top ----------------------------------------
     face = find_rim_face(body)
@@ -284,17 +283,20 @@ def build(root, prof):
     log('shelled at %.2f mm, top open' % prof.WALL_THICKNESS)
 
     # --- 3. rib, sitting on the rim and rising with it ---------------------
-    sk_rib = root.sketches.add(
-        plane_at_expr(root, plus_param(rim), 'rib_base'))
+    sk_rib = root.sketches.add(plane_at_z(root, rim, 'rib_base'))
     sk_rib.name = 'rib'
     draw_polygon(sk_rib, prof.RIB_OUTLINE)
     rib_profile = largest_profile(sk_rib)
     if rib_profile is not None:
         ri = feats.extrudeFeatures.createInput(
             rib_profile, adsk.fusion.FeatureOperations.JoinFeatureOperation)
-        ri.setOneSideExtent(extent_dist(rib_top - rim), dir_pos)
+        # This is the wall the parameter raises.
+        ri.setOneSideExtent(
+            adsk.fusion.DistanceExtentDefinition.create(
+                plus_param(rib_top - rim)), dir_pos)
         feats.extrudeFeatures.add(ri)
-        log('rib joined, %.3f mm tall' % (rib_top - rim))
+        log('rib joined, %.3f mm + %s tall, top at %.3f mm + %s'
+            % (rib_top - rim, HEIGHT_PARAM, rib_top, HEIGHT_PARAM))
 
     # --- 4. screw holes through the floor ----------------------------------
     # The floor does not move, so these need no parameter.
@@ -314,15 +316,10 @@ def build(root, prof):
     made = []
     for c in prof.CUTOUTS:
         # Underside of the opening in the corrected frame.
+        # Both openings lie within the rib's footprint, so they travel up
+        # with it and keep a constant distance below its top edge.
         z_bottom = zc(c['y'] + c['height'] / 2.0)
-        if OPENING_ANCHOR == 'rim':
-            # Pinned below the rim, so it travels up as the wall grows and the
-            # gap above it stays constant.
-            expr, note = plus_param(z_bottom), '+ %s' % HEIGHT_PARAM
-        else:
-            # Pinned above the floor, so the wall above it grows instead.
-            expr, note = vi(z_bottom), '(fixed)'
-        cp = plane_at_expr(root, expr, 'base_%s' % c['name'])
+        cp = plane_at_expr(root, plus_param(z_bottom), 'base_%s' % c['name'])
         sk_c = root.sketches.add(cp)
         sk_c.name = 'cutout_%s' % c['name']
         lo3, hi3 = cutout_plan(c, prof.WALL_THICKNESS, z_bottom)
@@ -337,9 +334,9 @@ def build(root, prof):
         ci.setOneSideExtent(extent_dist(c['height']), dir_pos)
         feats.extrudeFeatures.add(ci)
         made.append(c['name'])
-        log('cutout %s: z %.3f %s, height %.3f, %.3f below the rim'
-            % (c['name'], z_bottom, note, c['height'],
-               rim - (z_bottom + c['height'])))
+        log('cutout %s: z %.3f + %s, height %.3f, %.3f below the rib top'
+            % (c['name'], z_bottom, HEIGHT_PARAM, c['height'],
+               rib_top - (z_bottom + c['height'])))
 
     return body, made
 

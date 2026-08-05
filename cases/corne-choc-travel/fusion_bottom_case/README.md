@@ -113,61 +113,40 @@ Heights in the corrected frame, at `case_extra_height = 0`:
 `verify_rebuild.py` still works in the original mesh frame, since that is what
 the source STL is measured in. Same geometry, different labels.
 
-## Raising the case: `case_extra_height`
+## Raising the rib: `case_extra_height`
 
 The script creates one Fusion **user parameter**, `case_extra_height`,
 default `0 mm`. After the first run it lives in `Modify` → `Change
 Parameters`, so you can change it there and the model rebuilds — no need to
 re-run the script.
 
-The **floor is the fixed reference.** Raising the parameter makes the wall
-taller: the rim rises, and the openings travel up with it so that the gap
-between the top of the wall and the top of each opening never changes. The
-wall band *below* the openings is what grows. The floor and its screw holes
-do not move.
+It raises **only the rib** — the L-shaped taller wall run at the +X end,
+`RIB_OUTLINE`. The floor, the main perimeter wall and the screw holes do not
+move.
 
-Measured, in the mesh frame the verifier reports:
+Both openings lie inside the rib's footprint in plan:
+
+| opening | wall | plan extent | inside rib? |
+|---|---|---|---|
+| `side_port` | +Z | X −19.5…−8.5 | rib's top segment |
+| `usb_port` | +X | Z −6.0…10.0 | rib's vertical segment |
+
+so they travel up with it, keeping a constant distance below the rib's top
+edge.
+
+Measured, as the verifier reports in the mesh frame:
 
 | | 0 mm | 3 mm |
 |---|---|---|
-| `usb_port` gap below rim | 2.740 | **2.740** |
-| `side_port` gap below rim | 0.000 | **0.000** |
-| rim | −6.900 | **−9.900** |
-| floor | 2.034…3.532 | 2.034…3.532 |
-| volume | 19261.1 mm³ | 21062.7 mm³ |
+| `usb_port` gap to rib end | 6.065 | **6.065** |
+| `side_port` gap to rib end | 3.325 | **3.325** |
+| rib end | −12.965 | **−15.965** |
+| floor / perimeter rim | unchanged | unchanged |
+| volume | 19261.0 mm³ | 19616.4 mm³ |
 
-Both gaps hold constant, which is the property that defines the behaviour.
-Volume rises by the skirt band area (~600.5 mm²) times the parameter.
-
-Note `side_port` is flush with the rim — its gap is 0.000, i.e. it is a notch
-open at the top edge rather than a closed slot. Only `usb_port` has a
-"short bit" of wall above it.
-
-### Which end the openings follow
-
-One constant at the top of the script:
-
-```python
-OPENING_ANCHOR = 'rim'    # or 'floor'
-```
-
-| value | behaviour |
-|---|---|
-| `'rim'` | openings keep their distance below the rim and travel up with it; the wall **below** them grows |
-| `'floor'` | openings keep their height above the floor; the wall **above** them grows |
-
-### How it is wired
-
-Sketch geometry cannot be driven by an expression without adding driven
-dimensions, so the openings are **not** sketched on the wall face. Each one
-is sketched as a plan-view footprint on the case bottom and cut upward, with
-its vertical position in the extrude's `startExtent` and its height in the
-extrude depth. Those are real feature parameters, so both can reference
-`case_extra_height`.
-
-The same applies to the main extrusion height, the plate-top sketch plane and
-the screw-hole cut depth — the last two must track the top, or the holes miss
-the plate.
+The volume rise of **+355.4 mm³** is the rib band area (118.6 mm²) × 3. That
+is the check that the scope is right: raising the whole perimeter would use
+the outline band (601.8 mm²) and add ~1801 mm³ instead.
 
 To check a value without opening Fusion:
 

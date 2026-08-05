@@ -43,10 +43,11 @@ def build():
     # Mesh frame here (+Y up, floor plate on top); the Fusion script works in
     # the corrected frame where the floor sits at z = 0. Same geometry.
     #
-    # The FLOOR is the fixed reference. The rim extends away from it by EXTRA,
-    # and the openings travel with the rim, keeping the gap above them
-    # constant. In mesh coordinates that is -EXTRA.
-    skirt_bottom = L['skirt_bottom'] - EXTRA
+    # Only the RIB grows. The floor, the main perimeter wall and its rim are
+    # fixed; the rib extends away from the rim by EXTRA, and both openings --
+    # which lie inside the rib's footprint -- travel with it. In mesh
+    # coordinates "up" is -EXTRA.
+    skirt_bottom = L['skirt_bottom']
     rib_bottom = L['rib_bottom'] - EXTRA
 
     plate = face_at(P.PLATE_OUTLINE, L['plate_bottom']).extrude(
@@ -76,8 +77,9 @@ def build():
             box = Part.makeBox(w, h, d, Vector(
                 c['along'] - w / 2, y0, c['at'] - d / 2))
         shape = shape.cut(box)
-        print('  cut %-10s mesh y %8.3f ..%8.3f   (rim %8.3f, gap above %.3f)'
-              % (c['name'], y0, y0 + h, skirt_bottom, y0 - skirt_bottom))
+        print('  cut %-10s mesh y %8.3f ..%8.3f   (rib end %8.3f, '
+              'gap to rib end %.3f)'
+              % (c['name'], y0, y0 + h, rib_bottom, y0 - rib_bottom))
 
     return shape.removeSplitter()
 
