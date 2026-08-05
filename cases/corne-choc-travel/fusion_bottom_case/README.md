@@ -115,65 +115,6 @@ through regardless of which way the construction plane faces.
 After editing, re-run `verify_rebuild.py` to confirm the solid still closes
 before opening Fusion.
 
-## The `case_extra_depth` parameter
-
-A Fusion **user parameter** (`Modify` → `Change Parameters`), default `0 mm`.
-Change it there and the model rebuilds — no need to re-run the script.
-
-It lengthens the case upward from a fixed bottom, so **the extra height lands
-entirely in the partial wall above the sidewall openings**. The openings, and
-the wall below them, do not move.
-
-| P | wall below | opening | wall above |
-|---|---|---|---|
-| 0 | 2.740 | 3.900 | 2.294 |
-| 3 | 2.740 | 3.900 | 5.294 |
-
-(`usb_port`. `verify_rebuild.py` prints this table for every opening.)
-
-### What it drives
-
-The main extrusion's height, and with it the plate-top construction plane and
-the screw-hole cut depth. Those two must follow the top — holes sketched at
-the old height would miss the plate.
-
-The openings deliberately do **not** reference it. Their start offset is
-measured from the fixed case bottom.
-
-> Earlier this parameter was also added to each opening's height above the
-> case bottom, on the reading that it should drive three operations. That is
-> the opposite of what is wanted: it carries the openings up with the top, so
-> the wall *below* each opening grows and the wall above is unchanged. It also
-> closed off `side_port`, whose bottom is flush with the case bottom
-> (below = 0.000). Openings now stay put.
-
-### Why the openings are modelled the way they are
-
-Each opening is a **horizontal** plan rectangle extruded vertically, not a
-rectangle drawn on the wall. A wall sketch puts the opening's height into
-sketch geometry, and sketch points are dumb coordinates — they cannot follow a
-parameter without driven dimensions. Extruding vertically instead moves the
-height into the extrude's `startExtent` offset and depth, both real feature
-parameters that accept expressions. That is what makes the height above the
-case bottom an explicit, inspectable number.
-
-### Checking it outside Fusion
-
-`verify_rebuild.py` mirrors the same parameter:
-
-```
-EXTRA_DEPTH=3 /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd verify_rebuild.py
-```
-
-```
-EXTRA_DEPTH   volume        bbox Y            usb_port below/above
-0             19261.1 mm3   -12.96 .. 3.53    2.740 / 2.294
-3             21062.7 mm3   -12.96 .. 6.53    2.740 / 5.294
-```
-
-Top rises by exactly 3 mm, bottom unmoved, still a valid solid, and the growth
-is entirely above the opening.
-
 ## Coordinates
 
 All numbers are in the STL's native frame, so they match the `.step` files
