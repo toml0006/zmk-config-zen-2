@@ -43,6 +43,29 @@ MM = 0.1
 HEIGHT_PARAM = 'case_extra_height'
 HEIGHT_DEFAULT_MM = 0.0
 
+# The STL is authored with the floor plate at the TOP, so the part arrives
+# upside down. Fusion z is therefore plate_top - mesh_y, which stands the case
+# on its floor at z = 0.
+#
+# Negating z also fixes a mirroring bug. The previous mapping just swapped the
+# mesh Y and Z axes onto Fusion Z and Y, and a bare axis swap has determinant
+# -1 -- so the body in Fusion was a mirror image of the STL rather than a
+# rotation of it. Negating one axis restores determinant +1.
+#
+# In this frame, for the stock profile:
+#   floor   z  0.000 .. 1.498
+#   rim     z 10.432                  (open top edge of the wall)
+#   rib top z 16.497
+#   usb_port  z 3.792 .. 7.692        (2.740 below the rim)
+#   side_port z 6.932 .. 10.432       (flush with the rim -- a notch)
+
+# Which end the openings are pinned to as the wall grows.
+#   'rim'   -> openings keep their distance below the rim and travel up with
+#              it; the wall band BELOW them grows.
+#   'floor' -> openings keep their height above the floor; the wall band
+#              ABOVE them grows.
+OPENING_ANCHOR = 'rim'
+
 
 def log(msg):
     """Write to the Text Commands palette. Never raises."""
@@ -194,25 +217,40 @@ def horizontal_faces(body, tol_mm=0.25):
     return out
 
 
-def find_bottom_face(body, z_mm, tol_mm=0.25):
-    """Largest flat face at the given height."""
-    at_z = [t for t in horizontal_faces(body, tol_mm)
-            if abs(t[0] - z_mm) <= tol_mm]
-    if not at_z:
+def find_rim_face(body, tol_mm=0.25):
+    """The open top edge of the wall: the highest flat face.
+
+    Found by height rather than by a fixed value, because the rim rises with
+    the parameter. Safe to call only before the rib is added -- the rib's top
+    is higher still.
+    """
+    flats = horizontal_faces(body, tol_mm)
+    if not flats:
         return None
-    return max(at_z, key=lambda t: t[1])[2]
+    top = max(t[0] for t in flats)
+    at_top = [t for t in flats if abs(t[0] - top) <= tol_mm]
+    return max(at_top, key=lambda t: t[1])[2]
 
 
 def build(root, prof):
     L = prof.LEVELS
     feats = root.features
-    top, bot = L['plate_top'], L['skirt_bottom']
     dir_pos = adsk.fusion.ExtentDirections.PositiveExtentDirection
-    dir_neg = adsk.fusion.ExtentDirections.NegativeExtentDirection
 
-    # --- 1. tray blank: outline extruded the full height -------------------
+    datum = L['plate_top']
+
+    def zc(mesh_y):
+        """mesh +Y up (floor on top) -> Fusion z, floor down at z = 0."""
+        return datum - mesh_y
+
+    floor_bottom = zc(L['plate_top'])        # 0.000
+    rim = zc(L['skirt_bottom'])              # 10.432
+    rib_top = zc(L['rib_bottom'])            # 16.497
+    floor_thickness = zc(L['plate_bottom'])  # 1.498
+
+    # --- 1. blank: outline extruded from the floor up past the rim ---------
     log('sketching outline (%d points)' % len(prof.PLATE_OUTLINE))
-    sk = root.sketches.add(plane_at_z(root, bot, 'skirt_bottom'))
+    sk = root.sketches.add(plane_at_z(root, floor_bottom, 'floor_bottom'))
     sk.name = 'outline'
     draw_polygon(sk, prof.PLATE_OUTLINE)
     profile = largest_profile(sk)
@@ -223,47 +261,44 @@ def build(root, prof):
 
     ext = feats.extrudeFeatures.createInput(
         profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-    # Grows upward from the fixed bottom sketch plane.
+    # The floor stays on the build plate; the wall grows upward.
     ext.setOneSideExtent(
-        adsk.fusion.DistanceExtentDefinition.create(plus_param(top - bot)),
-        dir_pos)
+        adsk.fusion.DistanceExtentDefinition.create(plus_param(rim)), dir_pos)
     body = feats.extrudeFeatures.add(ext).bodies.item(0)
     body.name = 'BottomCase'
-    log('blank extruded, %d faces' % body.faces.count)
+    log('blank extruded to rim %.3f mm + %s, %d faces'
+        % (rim, HEIGHT_PARAM, body.faces.count))
 
-    # --- 2. shell it, removing the open underside --------------------------
-    face = find_bottom_face(body, bot)
+    # --- 2. shell, opening the top ----------------------------------------
+    face = find_rim_face(body)
     if face is None:
         found = ', '.join('z=%.3f (%.0f mm2)' % (z, a)
                           for z, a, _ in sorted(horizontal_faces(body)))
-        raise RuntimeError(
-            'no flat face at z=%.3f to shell.\nFlat faces on the body: %s'
-            % (bot, found or 'none'))
+        raise RuntimeError('no flat face to shell.\nFlat faces: %s'
+                           % (found or 'none'))
     rm = adsk.core.ObjectCollection.create()
     rm.add(face)
     sh = feats.shellFeatures.createInput(rm, False)
     sh.insideThickness = vi(prof.WALL_THICKNESS)
     feats.shellFeatures.add(sh)
-    log('shelled at %.2f mm' % prof.WALL_THICKNESS)
+    log('shelled at %.2f mm, top open' % prof.WALL_THICKNESS)
 
-    # --- 3. rib below the skirt -------------------------------------------
-    sk_rib = root.sketches.add(plane_at_z(root, L['rib_bottom'], 'rib_bottom'))
+    # --- 3. rib, sitting on the rim and rising with it ---------------------
+    sk_rib = root.sketches.add(
+        plane_at_expr(root, plus_param(rim), 'rib_base'))
     sk_rib.name = 'rib'
     draw_polygon(sk_rib, prof.RIB_OUTLINE)
     rib_profile = largest_profile(sk_rib)
     if rib_profile is not None:
         ri = feats.extrudeFeatures.createInput(
             rib_profile, adsk.fusion.FeatureOperations.JoinFeatureOperation)
-        ri.setOneSideExtent(
-            extent_dist(L['skirt_bottom'] - L['rib_bottom']), dir_pos)
+        ri.setOneSideExtent(extent_dist(rib_top - rim), dir_pos)
         feats.extrudeFeatures.add(ri)
-        log('rib joined')
+        log('rib joined, %.3f mm tall' % (rib_top - rim))
 
-    # --- 4. screw holes through the plate ---------------------------------
-    # The plate rises with the parameter, so the hole sketch plane and the cut
-    # depth must follow it or the holes miss the plate.
-    sk_h = root.sketches.add(
-        plane_at_expr(root, plus_param(top), 'plate_top'))
+    # --- 4. screw holes through the floor ----------------------------------
+    # The floor does not move, so these need no parameter.
+    sk_h = root.sketches.add(plane_at_z(root, floor_bottom, 'floor_holes'))
     sk_h.name = 'screw_holes'
     for x, z, r in prof.SCREW_HOLES:
         sk_h.sketchCurves.sketchCircles.addByCenterRadius(pt(x, z), r * MM)
@@ -271,22 +306,23 @@ def build(root, prof):
         hi = feats.extrudeFeatures.createInput(
             all_profiles(sk_h),
             adsk.fusion.FeatureOperations.CutFeatureOperation)
-        hi.setOneSideExtent(
-            adsk.fusion.DistanceExtentDefinition.create(
-                plus_param((top - bot) + 1.0)), dir_neg)
+        hi.setOneSideExtent(extent_dist(floor_thickness + 1.0), dir_pos)
         feats.extrudeFeatures.add(hi)
-        log('%d screw holes cut' % len(prof.SCREW_HOLES))
+        log('%d screw holes cut through the floor' % len(prof.SCREW_HOLES))
 
-    # --- 5. wall cutouts ---------------------------------------------------
+    # --- 5. wall openings ---------------------------------------------------
     made = []
-    # Each opening gets its own construction plane at its underside, placed by
-    # an expression so it tracks the parameter. Deliberately NOT done with
-    # ExtrudeFeatureInput.startExtent: setOneSideExtent rebuilds the extent
-    # definition and discards a previously assigned startExtent, which silently
-    # dropped both the opening's height and the parameter with it.
     for c in prof.CUTOUTS:
-        z_bottom = c['y'] - c['height'] / 2.0
-        cp = plane_at_expr(root, plus_param(z_bottom), 'base_%s' % c['name'])
+        # Underside of the opening in the corrected frame.
+        z_bottom = zc(c['y'] + c['height'] / 2.0)
+        if OPENING_ANCHOR == 'rim':
+            # Pinned below the rim, so it travels up as the wall grows and the
+            # gap above it stays constant.
+            expr, note = plus_param(z_bottom), '+ %s' % HEIGHT_PARAM
+        else:
+            # Pinned above the floor, so the wall above it grows instead.
+            expr, note = vi(z_bottom), '(fixed)'
+        cp = plane_at_expr(root, expr, 'base_%s' % c['name'])
         sk_c = root.sketches.add(cp)
         sk_c.name = 'cutout_%s' % c['name']
         lo3, hi3 = cutout_plan(c, prof.WALL_THICKNESS, z_bottom)
@@ -298,13 +334,12 @@ def build(root, prof):
             continue
         ci = feats.extrudeFeatures.createInput(
             p, adsk.fusion.FeatureOperations.CutFeatureOperation)
-        # Straight upward cut of exactly the opening's height, starting on
-        # its own plane. No start offset involved.
         ci.setOneSideExtent(extent_dist(c['height']), dir_pos)
         feats.extrudeFeatures.add(ci)
         made.append(c['name'])
-        log('cutout %s: underside at %.3f mm + %s, height %.3f mm'
-            % (c['name'], z_bottom, HEIGHT_PARAM, c['height']))
+        log('cutout %s: z %.3f %s, height %.3f, %.3f below the rim'
+            % (c['name'], z_bottom, note, c['height'],
+               rim - (z_bottom + c['height'])))
 
     return body, made
 

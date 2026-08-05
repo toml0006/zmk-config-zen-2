@@ -40,31 +40,35 @@ def face_at(points, y):
 
 def build():
     L, T = P.LEVELS, P.WALL_THICKNESS
-    # Everything above the case bottom shifts up by EXTRA; the bottom, the
-    # skirt's lower edge and the rib do not move.
-    plate_bottom = L['plate_bottom'] + EXTRA
-    plate_top = L['plate_top'] + EXTRA
+    # Mesh frame here (+Y up, floor plate on top); the Fusion script works in
+    # the corrected frame where the floor sits at z = 0. Same geometry.
+    #
+    # The FLOOR is the fixed reference. The rim extends away from it by EXTRA,
+    # and the openings travel with the rim, keeping the gap above them
+    # constant. In mesh coordinates that is -EXTRA.
+    skirt_bottom = L['skirt_bottom'] - EXTRA
+    rib_bottom = L['rib_bottom'] - EXTRA
 
-    plate = face_at(P.PLATE_OUTLINE, plate_bottom).extrude(
+    plate = face_at(P.PLATE_OUTLINE, L['plate_bottom']).extrude(
         Vector(0, L['plate_top'] - L['plate_bottom'], 0))
 
-    outer = face_at(P.PLATE_OUTLINE, L['skirt_bottom'])
+    outer = face_at(P.PLATE_OUTLINE, skirt_bottom)
     inner = Part.Face(outer.OuterWire.makeOffset2D(-T, 0, False, False))
     skirt = outer.cut(inner).extrude(
-        Vector(0, plate_bottom - L['skirt_bottom'], 0))
+        Vector(0, L['plate_bottom'] - skirt_bottom, 0))
 
-    rib = face_at(P.RIB_OUTLINE, L['rib_bottom']).extrude(
-        Vector(0, L['skirt_bottom'] - L['rib_bottom'], 0))
+    rib = face_at(P.RIB_OUTLINE, rib_bottom).extrude(
+        Vector(0, skirt_bottom - rib_bottom, 0))
 
     shape = plate.fuse(skirt).fuse(rib).removeSplitter()
 
     for x, z, r in P.SCREW_HOLES:
         shape = shape.cut(Part.makeCylinder(
-            r, 20, Vector(x, plate_bottom - 5, z), Vector(0, 1, 0)))
+            r, 20, Vector(x, L['plate_bottom'] - 5, z), Vector(0, 1, 0)))
 
     for c in P.CUTOUTS:
         w, h, d = c['width'], c['height'], T * 6
-        y0 = c['y'] + EXTRA - h / 2
+        y0 = c['y'] - EXTRA - h / 2
         if c['wall'] in ('+X', '-X'):
             box = Part.makeBox(d, h, w, Vector(
                 c['at'] - d / 2, y0, c['along'] - w / 2))
@@ -72,7 +76,8 @@ def build():
             box = Part.makeBox(w, h, d, Vector(
                 c['along'] - w / 2, y0, c['at'] - d / 2))
         shape = shape.cut(box)
-        print('  cut %s at y %.3f..%.3f' % (c['name'], y0, y0 + h))
+        print('  cut %-10s mesh y %8.3f ..%8.3f   (rim %8.3f, gap above %.3f)'
+              % (c['name'], y0, y0 + h, skirt_bottom, y0 - skirt_bottom))
 
     return shape.removeSplitter()
 

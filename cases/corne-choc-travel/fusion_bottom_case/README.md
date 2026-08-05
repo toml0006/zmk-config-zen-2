@@ -83,6 +83,36 @@ Prefer to skip Fusion scripting? `corne_bottom_case.step` in this folder is
 the verified solid — just `File` → `Open` it. STEP import is not
 license-gated.
 
+## Orientation
+
+The STL is authored with the floor plate at the **top**, so the part arrives
+upside down. The Fusion script maps
+
+```
+Fusion X = mesh X        Fusion Y = mesh Z        Fusion Z = plate_top - mesh Y
+```
+
+which stands the case on its floor at `z = 0`.
+
+That negation is not only cosmetic. The earlier mapping simply swapped the
+mesh Y and Z axes onto Fusion Z and Y, and a bare axis swap has determinant
+**-1** — so the body in Fusion was a *mirror image* of the STL, not a rotation
+of it. On an asymmetric Corne half that is a real defect. Negating one axis
+restores determinant +1.
+
+Heights in the corrected frame, at `case_extra_height = 0`:
+
+| feature | z |
+|---|---|
+| floor | 0.000 … 1.498 |
+| `usb_port` | 3.792 … 7.692 |
+| `side_port` | 6.932 … 10.432 |
+| rim (open top edge) | 10.432 |
+| rib top | 16.497 |
+
+`verify_rebuild.py` still works in the original mesh frame, since that is what
+the source STL is measured in. Same geometry, different labels.
+
 ## Raising the case: `case_extra_height`
 
 The script creates one Fusion **user parameter**, `case_extra_height`,
@@ -90,26 +120,41 @@ default `0 mm`. After the first run it lives in `Modify` → `Change
 Parameters`, so you can change it there and the model rebuilds — no need to
 re-run the script.
 
-It grows the case **upward from a fixed bottom**. The wall band below the
-sidewall openings gets taller, and the openings, the plate and the screw
-holes all rise by the same amount. The case bottom, the shelled underside
-and the rib stay exactly where they are.
+The **floor is the fixed reference.** Raising the parameter makes the wall
+taller: the rim rises, and the openings travel up with it so that the gap
+between the top of the wall and the top of each opening never changes. The
+wall band *below* the openings is what grows. The floor and its screw holes
+do not move.
 
-Measured at `case_extra_height = 3 mm`:
+Measured, in the mesh frame the verifier reports:
 
 | | 0 mm | 3 mm |
 |---|---|---|
-| `usb_port` (Y) | −4.160…−0.260 | −1.160…2.740 |
-| `side_port` (Y) | −6.900…−3.400 | −3.900…−0.400 |
-| bbox Y | −12.96…3.53 | −12.96…**6.53** |
+| `usb_port` gap below rim | 2.740 | **2.740** |
+| `side_port` gap below rim | 0.000 | **0.000** |
+| rim | −6.900 | **−9.900** |
+| floor | 2.034…3.532 | 2.034…3.532 |
 | volume | 19261.1 mm³ | 21062.7 mm³ |
 
-Bottom fixed, top +3, both openings +3. The volume rises by the skirt band
-area (~600.5 mm²) times the parameter.
+Both gaps hold constant, which is the property that defines the behaviour.
+Volume rises by the skirt band area (~600.5 mm²) times the parameter.
 
-`side_port`'s underside sits flush with the case bottom at 0 mm, so raising
-the parameter is what creates a wall band beneath it — the edge count drops
-from 559 to 555 as its lower edge stops coinciding with the case bottom.
+Note `side_port` is flush with the rim — its gap is 0.000, i.e. it is a notch
+open at the top edge rather than a closed slot. Only `usb_port` has a
+"short bit" of wall above it.
+
+### Which end the openings follow
+
+One constant at the top of the script:
+
+```python
+OPENING_ANCHOR = 'rim'    # or 'floor'
+```
+
+| value | behaviour |
+|---|---|
+| `'rim'` | openings keep their distance below the rim and travel up with it; the wall **below** them grows |
+| `'floor'` | openings keep their height above the floor; the wall **above** them grows |
 
 ### How it is wired
 
