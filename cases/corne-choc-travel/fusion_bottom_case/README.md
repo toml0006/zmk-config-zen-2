@@ -186,9 +186,6 @@ and robust to all of that.
 |---|---|---|
 | `FILLET_RADIUS_MM` | 2.0 | fillets the inside floor-to-wall junction |
 | `wall_thickness` (Fusion parameter) | 1.5 | shell thickness; J scales with t³ |
-| `PORT_FRAMES` | `True` | reinforcing collars around the openings |
-| `PORT_FRAME_THICKNESS_MM` | 1.2 | how far a collar protrudes inward |
-| `PORT_FRAME_MARGIN_MM` | 2.0 | how far it extends past the opening |
 
 **Fillet.** The floor-to-wall corner is where the U-channel hinges. In pure
 thin-walled theory a junction fillet adds only modestly to `J`; its real value
@@ -201,18 +198,11 @@ logs a skip if the geometry will not take it.
 **The shell grows inward, so raising it shrinks the cavity by the same amount
 per side.** Verify the PCB and plate still drop in before printing.
 
-**Port collars.** `usb_port` is 16 mm wide in a 10.4 mm wall, so it removes
-most of that wall's local shear path. The collars put some back. Measured:
-+201 mm³, 191 → 206 faces, and the **bounding box does not change** — they are
-entirely internal. They protrude 1.2 mm inward, so check clearance against the
-PCB and the connectors; `PORT_FRAMES = False` removes them.
+### Not done: closing the section
 
-### Closing the section: bosses and webs
-
-The PCB bolts down to the five holes in the floor, so it already acts as a
-partial shear panel. The limit is not the screws — it is that the holes sit
-well inboard, so the wall can only reach a screw by **bending the floor**
-across that gap:
+The PCB bolts to the five holes in the floor, so it already acts as a partial
+shear panel. What limits it is that those holes sit well inboard, so the wall
+can only reach a screw by bending the floor across the gap:
 
 | screw hole (x, z) | distance to nearest wall |
 |---|---|
@@ -224,37 +214,28 @@ across that gap:
 
 Mean 16.1 mm, and 5 fasteners on a 405 mm perimeter is ~81 mm spacing.
 
-So each boss is **webbed to the nearest point on the wall**. The web converts
-that bending cantilever into a shear web, which is stiff in-plane rather than
-in bending. Nearest points are computed from `PLATE_OUTLINE` at build time —
-no PCB data needed, since the hole positions came from the STL itself.
+Bosses at those positions webbed out to the nearest wall were tried and
+removed (they cost ~1947 mm³ and assumed a plate height this model cannot
+confirm). If the twist ever needs addressing again, the options are:
 
-| knob | default | meaning |
-|---|---|---|
-| `BOSSES` | `True` | bosses at the five screw positions |
-| `BOSS_DIAMETER_MM` | 6.0 | outer diameter (1.76 mm wall around a Ø2.47 hole) |
-| `BOSS_HEIGHT_MM` | `None` | `None` = up to the rim, so the plate lands on them |
-| `WEBS` | `True` | web each boss to the nearest wall |
-| `WEB_THICKNESS_MM` | 1.6 | web thickness |
-
-Measured: +1947 mm³, 206 → 241 faces, **bounding box unchanged** (all
-internal). The screw-hole cut is deepened automatically to clear the bosses.
-
-**Check `BOSS_HEIGHT_MM` against your build.** `None` runs them to the rim, on
-the assumption that the plate lands there. If the PCB sits lower — the stock
-case uses separate spacers — set it to the real spacer length, or set
-`BOSSES = False` to keep using spacers.
+- **bosses + webs** at the five existing holes, webbing each to the nearest
+  point on `PLATE_OUTLINE` to convert that floor-bending cantilever into a
+  shear web. Needs the real spacer length to set the boss height;
+- **an internal ledge** at plate height, capturing the plate laterally around
+  the full perimeter. No fasteners and no PCB changes; needs the plate outline;
+- **a diagonal brace** across the opening, if the top must stay open.
+  Diagonals load in tension/compression rather than bending.
 
 ### A note on the reference PCB
 
-`../reference_corne-chocolate.kicad_pcb` is the **panelized foostan crkbd**
+`../reference_corne-chocolate.kicad_pcb` is the **panelized foostan crkbd**,
 pulled in only to trace the outline. It is not the Typeractive board. It has
 no `MountingHole` footprints; its Ø5.00 mm `Edge.Cuts` circles are controller
-cutouts and its only M2-sized (r=1.000) arcs sit at x = ±137.6, the panel
+cutouts, and its only M2-sized (r=1.000) arcs sit at x = ±137.6, the panel
 edges — tooling holes. Neither set matches this case's five holes (pairwise
 distance error 99.7 mm and 114.1 mm respectively).
 
-Do not use that file to place mounting features. The five hole positions in
+Do not use that file to place mounting features. The five positions in
 `SCREW_HOLES` were measured from the Typeractive STL and are correct.
 
 ## Editing cutouts
