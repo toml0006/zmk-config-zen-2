@@ -6,11 +6,7 @@ include:
   - board: nice_nano@2.0.0//zmk
     shield: corne_left nice_view_adapter nice_view
     snippet: studio-rpc-usb-uart
-    # Studio here talks over USB-UART (see snippet above), but
-    # CONFIG_ZMK_STUDIO_TRANSPORT_BLE still defaults to y, which adds a
-    # Studio GATT service to this build only. Alternating between this and
-    # the plain left build then changes the GATT database the host has
-    # cached for the same device. Turn it off so both builds present the
-    # same services.
-    cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_STUDIO_TRANSPORT_BLE=n
+    # ZMK_STUDIO_TRANSPORT_BLE is disabled in config/corne.conf, not here:
+    # the local Docker build does not read this file.
+    cmake-args: -DCONFIG_ZMK_STUDIO=y
     artifact-name: corne_left_with_studio
