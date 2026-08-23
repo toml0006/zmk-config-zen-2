@@ -22,7 +22,8 @@ Boxes stack. Each box takes a front label and an optional lid sticker.
 - 75° draft on the stackable ring around the base
 - Front label is a flush recessed pocket for a paper, printed, or vinyl label
 - Lid sticker recess is 0.4 mm (two layers at 0.2 mm)
-- Fusion design history enabled, single body per exported file
+- Fusion design history enabled; all geometry as bodies in the root component
+  (one body for lidless variants, two for lidded)
 
 ## Switch dimensions
 
@@ -55,9 +56,44 @@ widest and most consistent.
 
 ## Variant strategy
 
-MakerWorld's customizer reads numeric parameters from a saved Fusion timeline.
-It cannot execute a script, evaluate a dropdown, or suppress a body. Any choice
-that changes topology must ship as a separate F3D.
+MakerWorld accepts Fusion `.f3d` files and regenerates them live as a customer
+moves the sliders. It does this by recomputing the saved timeline — it does not
+execute Fusion scripts, add-ins, or plugins. Three platform constraints follow,
+all verified against MakerWorld's own guidance and creator reports:
+
+1. **Favorited parameters are numeric only.** There are no boolean checkboxes
+   and no dropdown lists. A number input can be presented as a slider with a
+   minimum, maximum, and step.
+2. **Features cannot be suppressed from a parameter.** This is a Fusion
+   limitation, not a MakerWorld one: Fusion has no native way to conditionally
+   suppress a feature based on a parameter value.
+3. **Components are not supported.** Geometry must live as bodies in the root
+   component.
+
+Any choice that changes topology — switch family, lid presence — therefore
+ships as a separate F3D. There is no mechanism that would let it be a control.
+
+### Unitless parameter workaround
+
+Creators report that dimensionless Fusion parameters do not appear in the
+MakerWorld customizer even when favorited. `rows` and `cols` are counts and
+would be dimensionless by default, which would silently drop the two most
+important controls from the published model.
+
+Both are therefore declared with millimetre units and divided by `1 mm`
+wherever they are used as counts, so the units cancel and the arithmetic stays
+correct:
+
+```
+rows      = 4 mm
+cols      = 4 mm
+box_x     = (cols / 1 mm) * pitch + wall
+box_y     = (rows / 1 mm) * pitch + wall
+```
+
+The rectangular pattern quantities use the same `rows / 1 mm` form. The
+validation matrix includes an explicit check that both sliders are present and
+functional in the MakerWorld customizer, not merely that the model generates.
 
 Choc v1 and Choc v2 differ by 0.15 mm across the bottom housing. That is
 smaller than the dimensional spread of a typical FDM print, so one pocket
@@ -277,6 +313,10 @@ Per-variant configuration lives in a dictionary keyed by variant name, holding
 pocket size, pocket depth, pin relief dimensions, draft flag, and lid flag. One
 script run produces all four F3Ds plus their input contracts.
 
+All geometry is built as bodies in the root component; MakerWorld does not
+support components. The lidded variants therefore contain two bodies, box and
+lid, side by side on the build plate rather than as separate components.
+
 Layout:
 
 ```
@@ -306,8 +346,9 @@ Run each set in local Fusion and again in MakerWorld before publishing.
 | Fillet stress | Maximum fillet at minimum rows, columns, and wall |
 | Label stress | Maximum label and sticker on a 2 × 2 box |
 | Thin wall | Minimum wall with maximum rib depth and label depth |
+| Slider presence | Confirm every favorited parameter appears in the MakerWorld customizer |
 
-Each set must produce one body, a clean recompute, a valid generated 3MF, and
+Each set must produce the expected body count, a clean recompute, a valid 3MF, and
 no collapsed faces. The label set exists specifically to prove the clamp holds; an unclamped
 label on a small box is the failure mode most likely to reach a customer. The
 fillet set proves the build-time assertion is satisfied at the smallest box.
