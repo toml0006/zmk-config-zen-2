@@ -1,7 +1,7 @@
 # Parametric Switch Storage Box — Design
 
 **Date:** 2026-08-22
-**Status:** Approved design, pending implementation plan
+**Status:** Choc variant built and validated in Fusion. MX variant and lids outstanding.
 **Target:** MakerWorld Parametric Model Maker
 
 ## Purpose
@@ -141,8 +141,14 @@ Pocket depth is the below-flange housing depth plus 0.40 mm clearance.
 ### Snap ribs
 
 Two ribs sit on opposing pocket walls, on the X axis, centred in Y. Each rib is
-a shallow half-round running vertically down the wall, stopping short of the
-floor so the switch self-centres on entry.
+a triangular wedge that protrudes `rib_depth` into the pocket at its tip and
+tapers back to the wall over `rib_w` of width, extruded down `rib_h`.
+
+A half-round rib was tried first and rejected. A circle of any usable diameter
+buries most of itself in the wall: at 2.0 mm diameter it consumes 1.8 mm of a
+2.0 mm wall, leaving 0.2 mm. Increasing the radius to soften the ramp makes it
+worse, not better. The wedge adds material into the pocket void instead and
+takes nothing from the wall.
 
 | Parameter | Value | Note |
 | --- | --- | --- |
@@ -238,9 +244,30 @@ its whole perimeter and needs more interference to feel positive.
 ### Labels
 
 **Front label pocket.** A rectangle recessed into the front wall, centred on
-the flat run between the corner fillets. Depth 0.40 mm. The generator thickens
-the front wall locally to 2.15 mm under the pocket so at least 1.75 mm of
-material remains behind it at any wall setting.
+the flat run between the corner fillets and on the band above the stacking
+ring.
+
+Three clamps proved necessary once the model was built. The box is only
+10.45 mm tall, so a 12 mm label overhangs it in both directions and cuts into
+the stacking ring; and a 0.40 mm recess in a 2.00 mm wall leaves 1.60 mm,
+under the minimum. All three are expressed as `min()` parameters so an
+out-of-range value yields a smaller label rather than a failed generation:
+
+```
+label_w_eff = min(label_w; box_x - 2*corner_fillet - 2 mm)
+label_h_eff = min(label_h; box_h - ring_h - 2 mm)
+label_d_eff = max(0.2 mm; min(label_depth; min(0.6 mm; wall - 1.2 mm)))
+label_cz    = ring_h + (box_h - ring_h)/2
+```
+
+At default settings this yields a label spanning z 3.50 to 9.45 mm, clearing
+the 2.50 mm ring and staying below the 10.45 mm top face, with 1.60 mm of wall
+behind it.
+
+The depth clamp reserves 1.2 mm rather than 1.75 mm. Reserving the structural
+minimum leaves exactly zero depth at `wall = 1.75 mm`, and a zero-depth
+extrude fails with "No target body". A shallow cosmetic recess does not carry
+load and does not need the same reserve as a wall.
 
 The label clamp is the one that genuinely binds. Available flat run is:
 
@@ -304,37 +331,62 @@ less deep below the flange.
 
 ## Implementation
 
-A shared Python generator, `switchbox/switchbox.py`, follows the structure of
-`keycaps/fusion/keycap_makerworld/keycap_makerworld.py`: build the design in a
-new document, favourite the public parameters, run the validation matrix,
-restore defaults, and export.
-
-Per-variant configuration lives in a dictionary keyed by variant name, holding
-pocket size, pocket depth, pin relief dimensions, draft flag, and lid flag. One
-script run produces all four F3Ds plus their input contracts.
-
-All geometry is built as bodies in the root component; MakerWorld does not
-support components. The lidded variants therefore contain two bodies, box and
-lid, side by side on the build plate rather than as separate components.
-
-Layout:
+The Choc variant was built directly in Fusion through the API and exported to
+`switchbox/release/switchbox_choc.f3d`. Layout:
 
 ```
 switchbox/
-  switchbox.py
-  switchbox.manifest
-  makerworld-inputs.json
   README.md
+  makerworld-inputs.json
   release/
     switchbox_choc.f3d
-    switchbox_choc_lidded.f3d
-    switchbox_mx.f3d
-    switchbox_mx_lidded.f3d
+    switchbox_choc_4x4.stl
 ```
+
+The timeline is 18 features: outer profile, block extrude, corner fillets, the
+three seed pocket features, the rectangular pattern, the stacking ring cut, and
+the label cut. Thirty-five user parameters exist; nine are favorited.
+
+All geometry is built as bodies in the root component; MakerWorld does not
+support components.
+
+### Sketch constraints
+
+Two Fusion behaviours shaped how the sketches are built, and both cost real
+debugging time:
+
+**Sketch on a construction plane, not on a face.** Sketching on a model face
+auto-projects that face's edges into the sketch as reference geometry. Those
+projected edges carry their own constraints, and any dimension added afterwards
+collides with them, raising `VCS_SKETCH_OVER_CONSTRAINTS`. Every sketch in this
+model is placed on an offset construction plane instead.
+
+**Every sketch entity must be dimensioned to an expression.** An early version
+of the rib sketch drew its triangles at coordinates computed in Python from the
+default parameter values. It built correctly and looked right, but changing any
+parameter left the ribs behind while the pockets moved, shattering the model
+into as many as 96 loose bodies. The parameter sweep caught it; a visual check
+at default values would not have.
 
 ## Validation
 
-Run each set in local Fusion and again in MakerWorld before publishing.
+Six configurations have been run in Fusion and pass. Each checks for a single
+body, correct outer dimensions, a label that clears the stacking ring and stays
+below the top face, at least 1.75 mm of material behind the label recess, and a
+corner fillet that fits the footprint.
+
+| Case | Footprint | Result |
+| --- | --- | --- |
+| Default 4 x 4 | 65.60 x 65.60 | Pass |
+| All minimum | 33.05 x 33.05 | Pass |
+| All maximum | 177.50 x 177.50 | Pass |
+| Smallest box | 38.30 x 38.30 | Pass |
+| Thin wall | 95.60 x 64.40 | Pass |
+| Wide and short | 161.00 x 33.80 | Pass |
+
+Height is 10.45 mm in all six; only the footprint varies.
+
+The sets below remain to be run in the MakerWorld customizer before publishing.
 
 | Set | Values |
 | --- | --- |
