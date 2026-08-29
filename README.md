@@ -3,29 +3,50 @@
 ZMK firmware configs for every keyboard Jackson runs, in one place. CI
 builds each on push and ships separate artifacts.
 
+Organized **one folder per physical keyboard** under `keyboards/`. Shared
+hardware assets live in `shared/`. ZMK build infrastructure (`boards/`,
+`zephyr/`, `.github/`) stays at the repo root — CI needs it there.
+
 ```
 .
-├── corneish-zen-v2/      Corneish Zen v2 (low-profile wireless, LOWPROKB)
-├── corne-prospector/     Corne (Typeractive) with Prospector dongle as central
-├── corne-standalone/     Corne (Typeractive) plain — dongle-less
-├── corne-scanner/        Corne (Typeractive) + passive Prospector scanner
-├── boards/               Custom boards + shields (board_root for all configs)
+├── keyboards/                        One folder per board I own
+│   ├── corneish-zen/                 Corneish Zen v2 (low-profile wireless, LOWPROKB)  [ZMK]
+│   ├── typeractive/                  Typeractive Corne — 2 units, 3 flashable builds   [ZMK]
+│   │   ├── prospector/               Dongle = central, both halves = peripherals
+│   │   ├── standalone/               Left = central, right = peripheral (no dongle)
+│   │   └── scanner/                  Standalone + passive Prospector observer
+│   ├── dasbob/                       DASBOB split                                      [Vial/QMK]
+│   ├── totem/                        Totem split — firmware/ + case/                   [ZMK]
+│   ├── th40/                         40% Corne-matched layout        (planned)         [VIA/QMK]
+│   ├── iris/                         Iris split                      (planned)
+│   ├── nuphy-air-v3/                 Nuphy Air V3, off-the-shelf     (planned)         [QMK/VIA]
+│   ├── corne-mx-2.4ghz/             Corne, MX, 2.4GHz wireless      (planned)
+│   └── corne-ec-wired/             Corne, electro-capacitive, wired (planned)
+│
+├── boards/                           Custom ZMK boards + shields (board_root)
 │   ├── lowprokb/corneish_zen_mod/
 │   └── shields/corne_dongle/
-├── prospector/case/      Prospector dongle case STLs (hardware reference)
-├── vial/                 Vial layouts (bssk, crkbd_zen)
-├── docs/                 Keymap visualizations + community notes
-└── .github/workflows/    One job per keyboard
+├── zephyr/                           ZMK module marker (west)
+│
+├── shared/                           Not tied to one board
+│   ├── keycaps/                      Parametric keycap generator (Fusion)
+│   ├── switchbox/                    Parametric switch storage box
+│   ├── prospector/case/             Prospector dongle case STLs
+│   └── cases/                        Choc keycap pads, travel case
+│
+├── vial/                             Vial layouts (bssk, crkbd_zen)
+├── docs/                             Keymap visualizations + community notes
+└── .github/workflows/               One job per keyboard
 ```
 
 ## Keyboards
 
 | Config | Hardware | Topology | Notes |
 | --- | --- | --- | --- |
-| `corneish-zen-v2/` | Corneish Zen v2 halves (LOWPROKB) | Standard split | Custom boards under `boards/lowprokb/corneish_zen_mod/`. Left half has a `..._with_studio` variant for live editing via ZMK Studio. |
-| `corne-prospector/` | Typeractive Corne (nice!nano v2) + XIAO BLE Prospector dongle | Dongle = central, both halves = peripherals | Dongle owns the keymap. Custom `corne_dongle` shield + `prospector_adapter` shield from [carrefinho/prospector-zmk-module](https://github.com/carrefinho/prospector-zmk-module) (`feat/new-status-screens`). ZMK Studio enabled (USB to dongle). |
-| `corne-standalone/` | Typeractive Corne (nice!nano v2) + nice!view displays | Left = central, right = peripheral | Same W-CORNE keymap as the dongle build. Works fully on its own — no dongle. Left half has a `..._with_studio` variant. |
-| `corne-scanner/` | Same as standalone + a Prospector unit acting as a passive scanner | Left = central, right = peripheral, scanner = observer (no link) | Keyboard fully independent; the Prospector listens to BLE status adverts and renders them. Uses the [t-ogura fork](https://github.com/t-ogura/zmk-config-prospector) of the prospector module (`v2.2.1`) — supplies the broadcaster (`CONFIG_ZMK_STATUS_ADVERTISEMENT`) and `prospector_scanner` shield. |
+| `keyboards/corneish-zen/` | Corneish Zen v2 halves (LOWPROKB) | Standard split | Custom boards under `boards/lowprokb/corneish_zen_mod/`. Left half has a `..._with_studio` variant for live editing via ZMK Studio. |
+| `keyboards/typeractive/prospector/` | Typeractive Corne (nice!nano v2) + XIAO BLE Prospector dongle | Dongle = central, both halves = peripherals | Dongle owns the keymap. Custom `corne_dongle` shield + `prospector_adapter` shield from [carrefinho/prospector-zmk-module](https://github.com/carrefinho/prospector-zmk-module) (`feat/new-status-screens`). ZMK Studio enabled (USB to dongle). |
+| `keyboards/typeractive/standalone/` | Typeractive Corne (nice!nano v2) + nice!view displays | Left = central, right = peripheral | Same W-CORNE keymap as the dongle build. Works fully on its own — no dongle. Left half has a `..._with_studio` variant. |
+| `keyboards/typeractive/scanner/` | Same as standalone + a Prospector unit acting as a passive scanner | Left = central, right = peripheral, scanner = observer (no link) | Keyboard fully independent; the Prospector listens to BLE status adverts and renders them. Uses the [t-ogura fork](https://github.com/t-ogura/zmk-config-prospector) of the prospector module (`v2.2.1`) — supplies the broadcaster (`CONFIG_ZMK_STATUS_ADVERTISEMENT`) and `prospector_scanner` shield. |
 
 ### Corne: three flavors
 
@@ -52,7 +73,7 @@ flash whichever firmware matches the topology you want on the dongle.
 
 Switching: flash all three devices with the matching set. Clear BLE bonds
 first if pairing roles change (use the `settings_reset` shield — see
-`corne-prospector/build.yaml` for ready-made targets, applies to both
+`keyboards/typeractive/prospector/build.yaml` for ready-made targets, applies to both
 configs since both run on nice!nano v2).
 
 ## Build
@@ -76,11 +97,11 @@ Not set up by default. ZMK's standard local-build flow works if you point
 `west init -l` at the desired config dir, e.g.:
 
 ```sh
-west init -l corne-prospector/config
+west init -l keyboards/typeractive/prospector/config
 west update
 west build -s zmk/app -d build -b "xiao_ble//zmk" -- \
     -DSHIELD="corne_dongle prospector_adapter" \
-    -DZMK_CONFIG="$PWD/corne-prospector/config" \
+    -DZMK_CONFIG="$PWD/keyboards/typeractive/prospector/config" \
     -DZMK_EXTRA_MODULES="$PWD"
 ```
 
@@ -92,7 +113,7 @@ workflow.)
 
 Each keyboard's directory has its own notes — see:
 
-- [`corne-prospector/README.md`](corne-prospector/README.md) — dongle pairing
+- [`keyboards/typeractive/prospector/README.md`](keyboards/typeractive/prospector/README.md) — dongle pairing
   order, settings_reset, Prospector display options
 - The Corneish Zen instructions previously at the repo root (now archived in
   `docs/`) for the V1/V2 PCB distinction

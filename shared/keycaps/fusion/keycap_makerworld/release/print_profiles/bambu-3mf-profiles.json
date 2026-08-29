@@ -1,0 +1,285 @@
+{
+  "combined_profile": {
+    "bytes": 9545314,
+    "configurations": [
+      "raised-compact-shallow",
+      "raised-compact-deep",
+      "raised-wide-low",
+      "raised-balanced",
+      "raised-tall-narrow",
+      "raised-tall-wide-deep",
+      "flat-compact-shallow",
+      "flat-compact-deep",
+      "flat-wide-shallow",
+      "flat-balanced",
+      "flat-tall-narrow",
+      "flat-tall-wide-deep"
+    ],
+    "file": "MakerWorld_Choc_Keycap_12_Config_Sampler_A1mini_0.08mm.3mf",
+    "object_count": 12,
+    "prediction_seconds": 15123,
+    "profile_image": "parameter-permutations-smooth-catalog.png",
+    "profile_image_sha256": "481f830bc9243076c89e099d949c9a76458ad562a20052f2aa55e14bdc544325",
+    "sha256": "38c56cb8d8cc97a5b8bed329ebff59a9fda34cf646e40aa4b45963743f8ccd17",
+    "slug": "12-config-sampler",
+    "support_used": true
+  },
+  "filament": "Bambu PLA Matte @BBL A1M",
+  "orientation": "standing on edge",
+  "printer": "Bambu Lab A1 mini 0.2 nozzle",
+  "process": "0.08mm High Quality @BBL A1M 0.2 nozzle",
+  "profiles": [
+    {
+      "bytes": 2381154,
+      "file": "MakerWorld_Choc_Keycap_raised-compact-shallow_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 11.0,
+        "cyl_h": 0.8,
+        "dish_depth": 0.3,
+        "edge_size": 0.15,
+        "skirt_h": 1.2,
+        "taper_h": 1.5,
+        "wall": 0.9
+      },
+      "prediction_seconds": 1560,
+      "profile_image": "raised-compact-shallow-smooth-v2.png",
+      "profile_image_sha256": "1f636bd3c77644b065dcfa14195e202674c994a7929d24312e3f8c1fc1bb8103",
+      "sha256": "5713333463962cf826f4026f76d7de0b468b6d325cf32d3ad68d8c82ea821882",
+      "slug": "raised-compact-shallow",
+      "support_used": true,
+      "top_style": "raised"
+    },
+    {
+      "bytes": 2333626,
+      "file": "MakerWorld_Choc_Keycap_raised-compact-deep_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 12.0,
+        "cyl_h": 1.0,
+        "dish_depth": 1.2,
+        "edge_size": 0.3,
+        "skirt_h": 1.2,
+        "taper_h": 1.5,
+        "wall": 1.2
+      },
+      "prediction_seconds": 1559,
+      "profile_image": "raised-compact-deep-smooth-v2.png",
+      "profile_image_sha256": "c1ad8660ba7c71586f422d1adbcc4619b13a249de0563184d3439867f5fee2fc",
+      "sha256": "987a2122ac1e14b489a2b98e56b8b37920d0034d90030468e940d9d6e6e45004",
+      "slug": "raised-compact-deep",
+      "support_used": true,
+      "top_style": "raised"
+    },
+    {
+      "bytes": 2292370,
+      "file": "MakerWorld_Choc_Keycap_raised-wide-low_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 13.4,
+        "cyl_h": 0.8,
+        "dish_depth": 0.8,
+        "edge_size": 0.45,
+        "skirt_h": 1.7,
+        "taper_h": 1.5,
+        "wall": 1.2
+      },
+      "prediction_seconds": 1560,
+      "profile_image": "raised-wide-low-smooth-v2.png",
+      "profile_image_sha256": "ae2cf022527354b0aeb3e27342d0ef8e0be2a8b86a770b74132d4d94ff631627",
+      "sha256": "d099b6f0f4fc7330b8fba17c0b7812f280e15545a0c763c8b8ffd0cd5d3ccd26",
+      "slug": "raised-wide-low",
+      "support_used": true,
+      "top_style": "raised"
+    },
+    {
+      "bytes": 2474489,
+      "file": "MakerWorld_Choc_Keycap_raised-balanced_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 13.0,
+        "cyl_h": 1.5,
+        "dish_depth": 0.8,
+        "edge_size": 0.3,
+        "skirt_h": 1.7,
+        "taper_h": 2.0,
+        "wall": 1.2
+      },
+      "prediction_seconds": 1814,
+      "profile_image": "raised-balanced-smooth-v2.png",
+      "profile_image_sha256": "aae08e1f61d022f493b28c8c5e425d2cf239d9d0ceb879867aaddb66600220ab",
+      "sha256": "47e71516574cb0d8b50f3874a6834476cf8ce572c0a0fee5299c7fab193632f1",
+      "slug": "raised-balanced",
+      "support_used": true,
+      "top_style": "raised"
+    },
+    {
+      "bytes": 2541610,
+      "file": "MakerWorld_Choc_Keycap_raised-tall-narrow_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 11.0,
+        "cyl_h": 2.5,
+        "dish_depth": 0.5,
+        "edge_size": 0.3,
+        "skirt_h": 2.4,
+        "taper_h": 3.0,
+        "wall": 0.9
+      },
+      "prediction_seconds": 2044,
+      "profile_image": "raised-tall-narrow-smooth-v2.png",
+      "profile_image_sha256": "b93c3291ab6e735355210afee6bdf7403918c1551def9b049ff9eac6cde8e819",
+      "sha256": "23a6f95a6baff8e93a90a81730614075868f7ee05f18c2faea76ff070b4ad58d",
+      "slug": "raised-tall-narrow",
+      "support_used": true,
+      "top_style": "raised"
+    },
+    {
+      "bytes": 2532421,
+      "file": "MakerWorld_Choc_Keycap_raised-tall-wide-deep_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 13.4,
+        "cyl_h": 2.5,
+        "dish_depth": 1.2,
+        "edge_size": 0.45,
+        "skirt_h": 2.4,
+        "taper_h": 3.0,
+        "wall": 1.5
+      },
+      "prediction_seconds": 2101,
+      "profile_image": "raised-tall-wide-deep-smooth-v2.png",
+      "profile_image_sha256": "180222c54abb419b5c5d685f9428236f7728c9e2650b8cd2a3aaece3029e13ff",
+      "sha256": "fe71c41354ece1d7b2fed044c5d0e6035366b90afa3e57bec98c3c6a3341abc6",
+      "slug": "raised-tall-wide-deep",
+      "support_used": true,
+      "top_style": "raised"
+    },
+    {
+      "bytes": 2292564,
+      "file": "MakerWorld_Choc_Keycap_flat-compact-shallow_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 11.0,
+        "cyl_h": 0.8,
+        "dish_depth": 0.3,
+        "edge_size": 0.15,
+        "skirt_h": 1.2,
+        "taper_h": 1.5,
+        "wall": 0.9
+      },
+      "prediction_seconds": 1468,
+      "profile_image": "flat-compact-shallow-smooth-v2.png",
+      "profile_image_sha256": "8ea3172f670f227eb36d40dfa96df272b3dccf05e2ed6a658b6d8bf27bdc3b5d",
+      "sha256": "7b39e2cc347a5cc10fb89b5569f121ae58b9e393345710f8f646acf74047d165",
+      "slug": "flat-compact-shallow",
+      "support_used": true,
+      "top_style": "flat"
+    },
+    {
+      "bytes": 2300770,
+      "file": "MakerWorld_Choc_Keycap_flat-compact-deep_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 12.0,
+        "cyl_h": 0.8,
+        "dish_depth": 1.2,
+        "edge_size": 0.3,
+        "skirt_h": 1.2,
+        "taper_h": 1.5,
+        "wall": 1.5
+      },
+      "prediction_seconds": 1421,
+      "profile_image": "flat-compact-deep-smooth-v2.png",
+      "profile_image_sha256": "294cdd3cf9d412ff2802ef72f990862b770344404057f7f86d81eda88350d2fc",
+      "sha256": "5c87e86fbb02d51ce2bed37c4d31e322f126d7c1e3f38241423db140949ffc7b",
+      "slug": "flat-compact-deep",
+      "support_used": true,
+      "top_style": "flat"
+    },
+    {
+      "bytes": 2360327,
+      "file": "MakerWorld_Choc_Keycap_flat-wide-shallow_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 13.4,
+        "cyl_h": 0.8,
+        "dish_depth": 0.3,
+        "edge_size": 0.3,
+        "skirt_h": 1.7,
+        "taper_h": 2.0,
+        "wall": 1.2
+      },
+      "prediction_seconds": 1560,
+      "profile_image": "flat-wide-shallow-smooth-v2.png",
+      "profile_image_sha256": "74427c7e5b8a43967edbf36cf283d15c900ab42d35043a7691e1021d8cba521f",
+      "sha256": "dc9481c01fac0ad0d0a7db67c09e6d15fcafac47ef769afc7dde50c736f7bb32",
+      "slug": "flat-wide-shallow",
+      "support_used": true,
+      "top_style": "flat"
+    },
+    {
+      "bytes": 2266027,
+      "file": "MakerWorld_Choc_Keycap_flat-balanced_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 13.0,
+        "cyl_h": 0.8,
+        "dish_depth": 0.8,
+        "edge_size": 0.3,
+        "skirt_h": 1.7,
+        "taper_h": 2.0,
+        "wall": 1.2
+      },
+      "prediction_seconds": 1557,
+      "profile_image": "flat-balanced-smooth-v2.png",
+      "profile_image_sha256": "7683bc4cceeb94b8983a18d7c07bc394bd200766442df37ca4ca5287c54ecb46",
+      "sha256": "b3aaa61d17af73e792b49df6b145e789acff4ad5dfe6b0ac205e1564a97b710a",
+      "slug": "flat-balanced",
+      "support_used": true,
+      "top_style": "flat"
+    },
+    {
+      "bytes": 2514307,
+      "file": "MakerWorld_Choc_Keycap_flat-tall-narrow_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 11.0,
+        "cyl_h": 0.8,
+        "dish_depth": 0.8,
+        "edge_size": 0.45,
+        "skirt_h": 2.4,
+        "taper_h": 3.0,
+        "wall": 1.2
+      },
+      "prediction_seconds": 1874,
+      "profile_image": "flat-tall-narrow-smooth-v2.png",
+      "profile_image_sha256": "d0d26f3363deb812a7feefccbc3ca4bb8cafd1b2f6b76ae8662e779ca0bb7dd8",
+      "sha256": "f05c5e760b88abbc37c409ee333a8006aed82c662989fdd846ee40eec4fb321d",
+      "slug": "flat-tall-narrow",
+      "support_used": true,
+      "top_style": "flat"
+    },
+    {
+      "bytes": 2634256,
+      "file": "MakerWorld_Choc_Keycap_flat-tall-wide-deep_A1mini_0.08mm.3mf",
+      "parameters": {
+        "cyl_dia": 13.4,
+        "cyl_h": 0.8,
+        "dish_depth": 1.2,
+        "edge_size": 0.45,
+        "skirt_h": 2.4,
+        "taper_h": 3.0,
+        "wall": 1.5
+      },
+      "prediction_seconds": 1865,
+      "profile_image": "flat-tall-wide-deep-smooth-v2.png",
+      "profile_image_sha256": "619baedb9166cf60ff9ab458800c2614bc2d8e31481b443ba221f2dc9ab043a9",
+      "sha256": "0593194c789bd39bc92df4aa526f99ad0d12e81846aa549a3ad919c3d0f126fa",
+      "slug": "flat-tall-wide-deep",
+      "support_used": true,
+      "top_style": "flat"
+    }
+  ],
+  "schemaVersion": 1,
+  "settings": {
+    "brim_mm": 3,
+    "infill": "100%",
+    "initial_layer_height_mm": 0.1,
+    "layer_height_mm": 0.08,
+    "nozzle_mm": 0.2,
+    "plate": "Textured PEI Plate",
+    "supports": "normal (auto)",
+    "wall_loops": 3
+  },
+  "slicer": "Bambu Studio 02.07.01.62"
+}

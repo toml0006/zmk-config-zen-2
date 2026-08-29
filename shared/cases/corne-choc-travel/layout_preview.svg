@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700">
+<rect width="1200" height="700" fill="#fafafa"/>
+<rect x="20.0" y="20.0" width="910.9" height="660.0" fill="white" stroke="#888" stroke-width="2" rx="34.8"/>
+<polygon points="331.2,71.9 331.2,308.2 382.2,345.4 382.9,347.3 384.4,349.8 403.8,493.2 441.1,557.9 442.8,561.8 442.0,563.7 441.0,567.9 439.2,571.9 435.8,574.7 331.1,635.3 326.4,636.5 92.5,636.3 88.9,634.6 86.1,632.4 84.3,627.9 84.2,472.2 80.3,471.4 77.9,470.2 75.1,468.0 73.4,463.7 73.3,393.9 68.7,392.3 65.1,389.4 63.6,385.4 63.5,312.9 65.2,308.7 68.6,305.7 73.1,304.3 73.4,234.4 74.3,230.8 77.3,228.1 81.3,226.4 94.2,226.6 94.1,71.7 95.0,68.1 97.4,66.3 98.8,64.4 102.4,63.5 322.9,63.5 326.6,64.5 328.4,66.9 330.3,68.3" fill="#cce" stroke="black" stroke-width="1.5"/>
+<polygon points="619.7,71.9 619.7,308.2 568.7,345.4 568.0,347.3 566.4,349.8 547.1,493.2 509.8,557.9 508.1,561.8 508.8,563.7 509.9,567.9 511.7,571.9 515.1,574.7 619.8,635.3 624.5,636.5 858.4,636.3 862.0,634.6 864.8,632.4 866.6,627.9 866.7,472.2 870.5,471.4 872.9,470.2 875.7,468.0 877.5,463.7 877.6,393.9 882.2,392.3 885.8,389.4 887.3,385.4 887.4,312.9 885.7,308.7 882.3,305.7 877.7,304.3 877.5,234.4 876.5,230.8 873.6,228.1 869.6,226.4 856.6,226.6 856.8,71.7 855.9,68.1 853.5,66.3 852.1,64.4 848.5,63.5 628.0,63.5 624.3,64.5 622.5,66.9 620.5,68.3" fill="#ecc" stroke="black" stroke-width="1.5"/>
+<circle cx="161.0" cy="467.2" r="6.4" fill="white" stroke="black" stroke-width="1"/>
+<circle cx="342.5" cy="525.3" r="6.3" fill="white" stroke="black" stroke-width="1"/>
+<circle cx="249.1" cy="152.2" r="6.3" fill="white" stroke="black" stroke-width="1"/>
+<circle cx="313.0" cy="330.7" r="6.4" fill="white" stroke="black" stroke-width="1"/>
+<circle cx="174.9" cy="152.9" r="6.4" fill="white" stroke="black" stroke-width="1"/>
+<circle cx="789.9" cy="467.2" r="6.4" fill="white" stroke="black" stroke-width="1"/>
+<circle cx="608.4" cy="525.3" r="6.3" fill="white" stroke="black" stroke-width="1"/>
+<circle cx="701.8" cy="152.2" r="6.3" fill="white" stroke="black" stroke-width="1"/>
+<circle cx="637.9" cy="330.7" r="6.4" fill="white" stroke="black" stroke-width="1"/>
+<circle cx="776.0" cy="152.9" r="6.4" fill="white" stroke="black" stroke-width="1"/>
+<text x="20" y="25" font-family="monospace" font-size="14">Tray: 209 x 152 mm (build plate 250x250) — typeractive outline + 10 holes</text>
+</svg>

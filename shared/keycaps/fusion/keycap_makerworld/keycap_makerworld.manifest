@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "Jackson Tomlinson",
+    "description": {
+        "": "Build and export the MakerWorld-parametric Choc v1 keycap F3D."
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}

@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "model": "MakerWorld Parametric Choc Keycap",
+  "artifact": "release/MakerWorld_Parametric_Choc_Keycap.f3d",
+  "inputs": [
+    {
+      "name": "skirt_h",
+      "unit": "mm",
+      "default": 1.7,
+      "minimum": 1.2,
+      "maximum": 2.4,
+      "step": 0.1
+    },
+    {
+      "name": "taper_h",
+      "unit": "mm",
+      "default": 2.0,
+      "minimum": 1.5,
+      "maximum": 3.0,
+      "step": 0.1
+    },
+    {
+      "name": "cyl_dia",
+      "unit": "mm",
+      "default": 13.0,
+      "minimum": 11.0,
+      "maximum": 13.4,
+      "step": 0.1
+    },
+    {
+      "name": "cyl_h",
+      "unit": "mm",
+      "default": 1.5,
+      "minimum": 0.8,
+      "maximum": 2.5,
+      "step": 0.1
+    },
+    {
+      "name": "dish_depth",
+      "unit": "mm",
+      "default": 0.8,
+      "minimum": 0.3,
+      "maximum": 1.2,
+      "step": 0.1
+    },
+    {
+      "name": "sweep",
+      "unit": "deg",
+      "default": 0.0,
+      "minimum": -10.0,
+      "maximum": 10.0,
+      "step": 1.0
+    },
+    {
+      "name": "wall",
+      "unit": "mm",
+      "default": 1.2,
+      "minimum": 0.9,
+      "maximum": 1.5,
+      "step": 0.1
+    },
+    {
+      "name": "chamfer_top",
+      "unit": "mm",
+      "default": 0.3,
+      "minimum": 0.15,
+      "maximum": 0.45,
+      "step": 0.05
+    },
+    {
+      "name": "chamfer_bottom",
+      "unit": "mm",
+      "default": 0.3,
+      "minimum": 0.15,
+      "maximum": 0.45,
+      "step": 0.05
+    },
+    {
+      "name": "chamfer_cyl",
+      "unit": "mm",
+      "default": 0.3,
+      "minimum": 0.15,
+      "maximum": 0.45,
+      "step": 0.05
+    },
+    {
+      "name": "chamfer_skirt",
+      "unit": "mm",
+      "default": 0.3,
+      "minimum": 0.15,
+      "maximum": 0.45,
+      "step": 0.05
+    }
+  ]
+}

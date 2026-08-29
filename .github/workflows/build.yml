@@ -12,29 +12,29 @@ jobs:
     uses: ./.github/workflows/build-user-config.yml
     with:
       archive_name: corneish-zen-v2
-      build_matrix_path: corneish-zen-v2/build.yaml
-      config_path: corneish-zen-v2/config
+      build_matrix_path: keyboards/corneish-zen/build.yaml
+      config_path: keyboards/corneish-zen/config
 
   corne-prospector:
     name: Corne + Prospector dongle
     uses: ./.github/workflows/build-user-config.yml
     with:
       archive_name: corne-prospector
-      build_matrix_path: corne-prospector/build.yaml
-      config_path: corne-prospector/config
+      build_matrix_path: keyboards/typeractive/prospector/build.yaml
+      config_path: keyboards/typeractive/prospector/config
 
   corne-standalone:
     name: Corne (standalone, no dongle)
     uses: ./.github/workflows/build-user-config.yml
     with:
       archive_name: corne-standalone
-      build_matrix_path: corne-standalone/build.yaml
-      config_path: corne-standalone/config
+      build_matrix_path: keyboards/typeractive/standalone/build.yaml
+      config_path: keyboards/typeractive/standalone/config
 
   corne-scanner:
     name: Corne + Prospector scanner (passive observer)
     uses: ./.github/workflows/build-user-config.yml
     with:
       archive_name: corne-scanner
-      build_matrix_path: corne-scanner/build.yaml
-      config_path: corne-scanner/config
+      build_matrix_path: keyboards/typeractive/scanner/build.yaml
+      config_path: keyboards/typeractive/scanner/config

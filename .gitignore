@@ -9,6 +9,47 @@ tools/
 .DS_Store
 
 # Prospector module is pulled in by west via config/west.yml; the local
-# clone under prospector/module/ is reference only (nested git repo).
-prospector/module/
+# clone under shared/prospector/module/ is reference only (nested git repo).
+shared/prospector/module/
 .claude/
+
+# Totem firmware is a full ZMK/Zephyr west workspace (nested repo) — reference only
+keyboards/totem/firmware/config/
+
+# Large CAD/print binaries kept on disk, out of git (reorg 2026-08-29)
+/keyboards/totem/case/TOTEM_case_ble_bottom_L_V.08.step
+/shared/cases/corne-choc-travel/reference_corne-chocolate.kicad_pcb
+/shared/cases/corne-choc-travel/typeractive_case-bottom-3dp-meshopt.step
+/shared/cases/corne-choc-travel/typeractive_case-bottom-3dp-meshopt_shifted.step
+/shared/cases/corne-choc-travel/typeractive_case-top-meshopt.step
+/shared/cases/corne-choc-travel/typeractive_premium-case-meshopt.step
+/shared/keycaps/fusion/keycap_makerworld/media/makerworld-cover-4x3-layer-lines.png
+/shared/keycaps/fusion/keycap_makerworld/media/makerworld-cover-4x3-prusa-toolpaths.png
+/shared/keycaps/fusion/keycap_makerworld/media/makerworld-realistic-iphone17-installed-3x4.png
+/shared/keycaps/fusion/keycap_makerworld/media/makerworld-realistic-iphone17-installed-clean-v2.png
+/shared/keycaps/fusion/keycap_makerworld/media/makerworld-realistic-iphone17-workbench-4x3.png
+/shared/keycaps/fusion/keycap_makerworld/media/makerworld-realistic-iphone17-workbench-clean-v2.png
+/shared/keycaps/fusion/keycap_makerworld/media/parameter-permutations-photoreal-catalog.png
+/shared/keycaps/fusion/keycap_makerworld/media/parameter-permutations-smooth-catalog.png
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_12_Config_Sampler_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_flat-balanced_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_flat-compact-deep_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_flat-compact-shallow_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_flat-tall-narrow_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_flat-tall-wide-deep_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_flat-wide-shallow_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_raised-balanced_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_raised-compact-deep_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_raised-compact-shallow_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_raised-tall-narrow_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_raised-tall-wide-deep_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/release/print_profiles/MakerWorld_Choc_Keycap_raised-wide-low_A1mini_0.08mm.3mf
+/shared/keycaps/fusion/keycap_makerworld/toolpaths/catalog/flat-tall-wide-deep-edge-oriented.stl
+/shared/prospector/case/prospector.f3z
+/shared/prospector/case/prospector.step
+/shared/prospector/case/prospector_m5s_plate.stl
+
+# Generated renders & slicer output — regenerable, keep on disk only
+*.png
+*.gcode
+*.3mf

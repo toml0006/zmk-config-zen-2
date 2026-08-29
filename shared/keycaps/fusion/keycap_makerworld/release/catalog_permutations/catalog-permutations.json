@@ -1,0 +1,172 @@
+{
+  "variants": [
+    {
+      "parameters": {
+        "cyl_dia": 11.0,
+        "cyl_h": 0.8,
+        "dish_depth": 0.3,
+        "edge_size": 0.15,
+        "skirt_h": 1.2,
+        "taper_h": 1.5,
+        "wall": 0.9
+      },
+      "slug": "raised-compact-shallow",
+      "stl": "MakerWorld_Choc_Keycap_raised-compact-shallow.stl",
+      "top_style": "raised"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 12.0,
+        "cyl_h": 1.0,
+        "dish_depth": 1.2,
+        "edge_size": 0.3,
+        "skirt_h": 1.2,
+        "taper_h": 1.5,
+        "wall": 1.2
+      },
+      "slug": "raised-compact-deep",
+      "stl": "MakerWorld_Choc_Keycap_raised-compact-deep.stl",
+      "top_style": "raised"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 13.4,
+        "cyl_h": 0.8,
+        "dish_depth": 0.8,
+        "edge_size": 0.45,
+        "skirt_h": 1.7,
+        "taper_h": 1.5,
+        "wall": 1.2
+      },
+      "slug": "raised-wide-low",
+      "stl": "MakerWorld_Choc_Keycap_raised-wide-low.stl",
+      "top_style": "raised"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 13.0,
+        "cyl_h": 1.5,
+        "dish_depth": 0.8,
+        "edge_size": 0.3,
+        "skirt_h": 1.7,
+        "taper_h": 2.0,
+        "wall": 1.2
+      },
+      "slug": "raised-balanced",
+      "stl": "MakerWorld_Choc_Keycap_raised-balanced.stl",
+      "top_style": "raised"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 11.0,
+        "cyl_h": 2.5,
+        "dish_depth": 0.5,
+        "edge_size": 0.3,
+        "skirt_h": 2.4,
+        "taper_h": 3.0,
+        "wall": 0.9
+      },
+      "slug": "raised-tall-narrow",
+      "stl": "MakerWorld_Choc_Keycap_raised-tall-narrow.stl",
+      "top_style": "raised"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 13.4,
+        "cyl_h": 2.5,
+        "dish_depth": 1.2,
+        "edge_size": 0.45,
+        "skirt_h": 2.4,
+        "taper_h": 3.0,
+        "wall": 1.5
+      },
+      "slug": "raised-tall-wide-deep",
+      "stl": "MakerWorld_Choc_Keycap_raised-tall-wide-deep.stl",
+      "top_style": "raised"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 11.0,
+        "cyl_h": 0.8,
+        "dish_depth": 0.3,
+        "edge_size": 0.15,
+        "skirt_h": 1.2,
+        "taper_h": 1.5,
+        "wall": 0.9
+      },
+      "slug": "flat-compact-shallow",
+      "stl": "MakerWorld_Choc_Keycap_flat-compact-shallow.stl",
+      "top_style": "flat"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 12.0,
+        "cyl_h": 0.8,
+        "dish_depth": 1.2,
+        "edge_size": 0.3,
+        "skirt_h": 1.2,
+        "taper_h": 1.5,
+        "wall": 1.5
+      },
+      "slug": "flat-compact-deep",
+      "stl": "MakerWorld_Choc_Keycap_flat-compact-deep.stl",
+      "top_style": "flat"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 13.4,
+        "cyl_h": 0.8,
+        "dish_depth": 0.3,
+        "edge_size": 0.3,
+        "skirt_h": 1.7,
+        "taper_h": 2.0,
+        "wall": 1.2
+      },
+      "slug": "flat-wide-shallow",
+      "stl": "MakerWorld_Choc_Keycap_flat-wide-shallow.stl",
+      "top_style": "flat"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 13.0,
+        "cyl_h": 0.8,
+        "dish_depth": 0.8,
+        "edge_size": 0.3,
+        "skirt_h": 1.7,
+        "taper_h": 2.0,
+        "wall": 1.2
+      },
+      "slug": "flat-balanced",
+      "stl": "MakerWorld_Choc_Keycap_flat-balanced.stl",
+      "top_style": "flat"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 11.0,
+        "cyl_h": 0.8,
+        "dish_depth": 0.8,
+        "edge_size": 0.45,
+        "skirt_h": 2.4,
+        "taper_h": 3.0,
+        "wall": 1.2
+      },
+      "slug": "flat-tall-narrow",
+      "stl": "MakerWorld_Choc_Keycap_flat-tall-narrow.stl",
+      "top_style": "flat"
+    },
+    {
+      "parameters": {
+        "cyl_dia": 13.4,
+        "cyl_h": 0.8,
+        "dish_depth": 1.2,
+        "edge_size": 0.45,
+        "skirt_h": 2.4,
+        "taper_h": 3.0,
+        "wall": 1.5
+      },
+      "slug": "flat-tall-wide-deep",
+      "stl": "MakerWorld_Choc_Keycap_flat-tall-wide-deep.stl",
+      "top_style": "flat"
+    }
+  ]
+}
