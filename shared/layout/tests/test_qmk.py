@@ -42,7 +42,9 @@ def test_corne_ec_plan():
     assert target[(0, 0, 0)] == 0x2B and target[(0, 4, 6)] == 0x2A   # Tab, Bspc
     assert target[(0, 3, 4)] == 0xE3 and target[(0, 3, 6)] == 0x2C   # Cmd, Space
     assert target[(0, 7, 0)] == 0x28 and target[(0, 5, 5)] == 0x33   # Enter, ;
-    assert target[(0, 0, 6)] == 0x0A2F and target[(1, 0, 6)] == 0x01  # local key on layer 0 only
+    assert target[(0, 0, 6)] == 0x0A2F and target[(0, 4, 0)] == 0x0A30  # tab prev / next
+    assert target[(1, 0, 6)] == 0x0A35 and target[(2, 4, 0)] == 0x0835  # window prev (Lower) / next (Raise)
+    assert target[(3, 0, 6)] == 0x01 and target[(1, 1, 6)] == 0x01      # Function layer / other inner keys: trans
     assert target[(3, 0, 0)] == 0x7C00                                 # override: QK_BOOT
     assert target[(5, 0, 0)] == 0x01                                   # layers past base are transparent
     assert [0x0D, 0x0E, 0, 0, 0x29] in combos                          # J+K -> Esc

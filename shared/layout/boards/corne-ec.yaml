@@ -11,10 +11,11 @@ matrix:
   right: {rows: [4, 5, 6], cols: [6, 5, 4, 3, 2, 1], thumbs: [[7, 2], [7, 1], [7, 0]]}
   extra: {LX0: [0, 6], LX1: [1, 6], RX0: [4, 0], RX1: [5, 0]}
 
-# Board-only keys (inner column): set on the first layer, transparent on the rest.
+# Board-only keys (inner column). A plain value sets the first layer only; a map sets
+# the named layers. Unlisted layers are transparent.
 local:
-  LX0: shift+cmd+lbkt       # prev tab
-  RX0: shift+cmd+rbkt       # next tab
+  LX0: {qwerty: shift+cmd+lbkt, number: shift+cmd+grave, symbol: shift+cmd+grave}  # prev tab / prev window
+  RX0: {qwerty: shift+cmd+rbkt, number: cmd+grave, symbol: cmd+grave}              # next tab / next window
   LX1: globe                # needs a custom QMK keycode -> KC_NO until firmware rebuild
   RX1: ctrl+shift+cmd+n4    # screenshot area to clipboard
 

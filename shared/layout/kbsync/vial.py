@@ -38,8 +38,10 @@ def plan(base, profile, layer_count):
                 binding = 'trans'
             elif pos in positions:
                 binding = layers[li]['bindings'][positions.index(pos)]
-            elif li == 0 and pos in profile['local']:
-                binding = normalize(profile['local'][pos])
+            elif pos in profile['local']:
+                spec = profile['local'][pos]
+                per_layer = spec if isinstance(spec, dict) else {ids[0]: spec}  # plain value = first layer only
+                binding = normalize(per_layer[ids[li]]) if ids[li] in per_layer else 'trans'
             else:
                 binding = 'trans'
             kc, why = to_qmk_or_none(binding, ids)
