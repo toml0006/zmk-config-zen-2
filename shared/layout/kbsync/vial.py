@@ -31,6 +31,8 @@ def plan(base, profile, layer_count):
         raise ValueError(f"{profile['board']} has {layer_count} layers, base needs {len(ids)}")
     layers = board_layers(base, profile)
     positions = profile['positions']
+    # firmware-specific keycodes for canonical keys, e.g. {globe: 0x7e03} once the firmware has it
+    custom = {normalize(k): f'qmk(0x{v:04x})' for k, v in (profile.get('qmk_keycodes') or {}).items()}
     target, degraded = {}, []
     for li in range(layer_count):
         for pos, rc in matrix_map(profile).items():
@@ -44,7 +46,7 @@ def plan(base, profile, layer_count):
                 binding = normalize(per_layer[ids[li]]) if ids[li] in per_layer else 'trans'
             else:
                 binding = 'trans'
-            kc, why = to_qmk_or_none(binding, ids)
+            kc, why = to_qmk_or_none(custom.get(binding, binding), ids)
             if why:
                 degraded.append((ids[li] if li < len(ids) else li, pos, binding, why))
             target[(li, *rc)] = kc
@@ -54,8 +56,8 @@ def plan(base, profile, layer_count):
     for combo in base.get('combos', []):
         if not all(p in positions for p in combo['keys']):
             continue
-        keys = [to_qmk_or_none(first[positions.index(p)], ids)[0] for p in combo['keys']]
-        out, why = to_qmk_or_none(combo['binding'], ids)
+        keys = [to_qmk_or_none(custom.get(b, b), ids)[0] for b in (first[positions.index(p)] for p in combo['keys'])]
+        out, why = to_qmk_or_none(custom.get(combo['binding'], combo['binding']), ids)
         if why:
             degraded.append(('combo', '+'.join(combo['keys']), combo['binding'], why))
         combos.append((keys + [0, 0, 0, 0])[:4] + [out])

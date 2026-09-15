@@ -16,8 +16,12 @@ matrix:
 local:
   LX0: {qwerty: shift+cmd+lbkt, number: shift+cmd+grave, symbol: shift+cmd+grave}  # prev tab / prev window
   RX0: {qwerty: shift+cmd+rbkt, number: cmd+grave, symbol: cmd+grave}              # next tab / next window
-  LX1: globe                # needs a custom QMK keycode -> KC_NO until firmware rebuild
+  LX1: globe                # KC_NO until the firmware has a Globe keycode (see qmk_keycodes)
   RX1: ctrl+shift+cmd+n4    # screenshot area to clipboard
+
+# Canonical keys that need a firmware custom keycode. Globe = consumer 0x29D; enable after
+# flashing firmware with shared/layout/firmware/qmk-globe (QK_KB_3, after the 3 EC keycodes).
+# qmk_keycodes: {globe: 0x7e03}
 
 # Bluetooth keys don't exist on a wired board; reuse those Function-layer slots.
 overrides:

@@ -35,6 +35,15 @@ def test_corne_ec_matrix():
     assert mm['L30'] == (3, 4) and mm['L32'] == (3, 6) and mm['R32'] == (7, 0) and mm['R30'] == (7, 2)
 
 
+def test_custom_globe_keycode():
+    profile = load_profile('corne-ec')
+    profile['qmk_keycodes'] = {'globe': 0x7E03}
+    target, _, degraded = plan(load_base(), profile, 8)
+    assert target[(0, 1, 6)] == 0x7E03                 # inner LX1
+    assert target[(2, 1, 5)] == 0x7E03                 # Symbol-layer G
+    assert not any(b == 'globe' for _, _, b, _ in degraded)
+
+
 def test_corne_ec_plan():
     target, combos, degraded = plan(load_base(), load_profile('corne-ec'), 8)
     assert len(target) == 46 * 8
