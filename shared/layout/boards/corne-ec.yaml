@@ -1,0 +1,27 @@
+board: corne-ec
+firmware: vial
+usb: {vid: 0x0022, pid: 0x45d3}        # "corne_ec", 46-key electro-capacitive, wired
+backup_dir: keyboards/corne-ec-wired/backups
+positions: corne42
+
+# Canonical position -> Vial matrix [row, col] (from the board's Vial definition).
+# cols and thumbs are listed outer -> inner.
+matrix:
+  left:  {rows: [0, 1, 2], cols: [0, 1, 2, 3, 4, 5], thumbs: [[3, 4], [3, 5], [3, 6]]}
+  right: {rows: [4, 5, 6], cols: [6, 5, 4, 3, 2, 1], thumbs: [[7, 2], [7, 1], [7, 0]]}
+  extra: {LX0: [0, 6], LX1: [1, 6], RX0: [4, 0], RX1: [5, 0]}
+
+# Board-only keys (inner column): set on the first layer, transparent on the rest.
+local:
+  LX0: shift+cmd+lbkt       # prev tab
+  RX0: shift+cmd+rbkt       # next tab
+  LX1: globe                # needs a custom QMK keycode -> KC_NO until firmware rebuild
+  RX1: ctrl+shift+cmd+n4    # screenshot area to clipboard
+
+# Bluetooth keys don't exist on a wired board; reuse those Function-layer slots.
+overrides:
+  function:
+    L00: qmk(0x7c00)   # QK_BOOT (was on this board's layer 3)
+    L01: qmk(0x7e01)   # EC_AP_D  actuation point down
+    L02: qmk(0x7e00)   # EC_AP_I  actuation point up
+    L05: qmk(0x7e02)   # EC_CLR   reset EC config

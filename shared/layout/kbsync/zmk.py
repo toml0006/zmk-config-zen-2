@@ -32,6 +32,8 @@ def to_triplet(binding, layer_ids):
         return 'mt', name_to_usage(args[0]), name_to_usage(args[1])
     if kind in BT_CMDS:
         return 'bt', BT_CMDS[kind], int(args[0], 0) if args else 0
+    if kind == 'qmk':
+        raise ValueError(f'{binding} is QMK-only')
     return kind, 0, 0
 
 

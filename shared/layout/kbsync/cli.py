@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import zmk, zmk_table
+from . import vial, zmk, zmk_table
 from .layout import REPO, ROOT, dump_base, load_base, load_profile, save_base
 
 
@@ -61,6 +61,19 @@ def cmd_verify_dump(args):
     sys.exit(1 if bad else 0)
 
 
+def cmd_push(args):
+    profile = load_profile(args.board)
+    if profile['firmware'] != 'vial':
+        sys.exit(f"{args.board}: live push supports vial boards so far (firmware: {profile['firmware']})")
+    ok = vial.push(load_base(), profile, dry_run=args.dry_run)
+    sys.exit(0 if ok else 1)
+
+
+def cmd_restore(args):
+    ok = vial.restore(load_profile(args.board), Path(args.backup).resolve())
+    sys.exit(0 if ok else 1)
+
+
 def cmd_zmk_table(args):
     out = ROOT / 'kbsync' / 'data' / 'zmk_keys.json'
     zmk_table.write(args.include_dir, out)
@@ -86,6 +99,16 @@ def main(argv=None):
     s.add_argument('board')
     s.add_argument('dump')
     s.set_defaults(fn=cmd_verify_dump)
+
+    s = sub.add_parser('push', help='write base.yaml to a connected board live (backs up first, then verifies)')
+    s.add_argument('board')
+    s.add_argument('--dry-run', action='store_true', help='show what would change without writing')
+    s.set_defaults(fn=cmd_push)
+
+    s = sub.add_parser('restore', help='write a backup taken by push back to the board')
+    s.add_argument('board')
+    s.add_argument('backup')
+    s.set_defaults(fn=cmd_restore)
 
     s = sub.add_parser('zmk-table', help='rebuild kbsync/data/zmk_keys.json from ZMK headers')
     s.add_argument('include_dir', help='zmk/app/include/dt-bindings/zmk')

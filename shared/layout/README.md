@@ -22,6 +22,14 @@ python3 -m kbsync.cli verify-dump corneish-zen ../../keyboards/corneish-zen/zen_
 python3 -m pytest -q
 ```
 
+Vial boards are programmed live over USB (needs `brew install hidapi`):
+
+```sh
+python3 -m kbsync.cli push corne-ec --dry-run     # plan only
+python3 -m kbsync.cli push corne-ec               # backup -> write -> read back + verify
+python3 -m kbsync.cli restore corne-ec <backup.json>
+```
+
 (`uv run kbsync …` works too.)
 
 ## Positions
@@ -42,5 +50,9 @@ Unnamed usages: `consumer(0x71)`. Behaviors: `mo(layer)`, `mt(lctrl, z)`,
 
 ## Status
 
-Step 1 of the build order is done (ZMK generation for the Corneish Zen, verified
-210/210 against the live device dump). Live pull/push over ZMK Studio is next.
+- ZMK: `.keymap` generation for the Corneish Zen, verified 210/210 against the live device dump.
+- Vial: live push/restore for the corne-ec (46 keys), verified 368/368 keys + 4/4 combos.
+- Next: ZMK Studio pull/push, Vial pull, remaining board profiles.
+
+Bindings a firmware can't express are degraded to "no key" and listed on every push.
+QMK/Vial-only keycodes go in board profiles as `qmk(0x....)`.

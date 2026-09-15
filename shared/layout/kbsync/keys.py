@@ -6,6 +6,7 @@ A binding is a string:
   mod-tap                mt(lctrl, z)
   wireless / tooling     bt_sel(0), bt_disc(1), bt_clr, bt_clr_all, bt_nxt, bt_prv, studio_unlock
   pass-through           trans, none
+  raw QMK keycode        qmk(0x7c00)   (board profiles for QMK/Vial boards only)
 
 Key names are ZMK's non-deprecated aliases, lowercased, shortest wins (ties alphabetical).
 Values are ZMK HID usages: mods << 24 | page << 16 | id.
@@ -23,7 +24,7 @@ MOD_BIT = dict(MODS)
 CONSUMER_PAGE = 0x0C
 
 NULLARY = {'trans', 'none', 'studio_unlock', 'bt_clr', 'bt_clr_all', 'bt_nxt', 'bt_prv'}
-CALLS = {'mo', 'tog', 'to', 'sl', 'lt', 'mt', 'bt_sel', 'bt_disc'}
+CALLS = {'mo', 'tog', 'to', 'sl', 'lt', 'mt', 'bt_sel', 'bt_disc', 'qmk'}
 _CALL = re.compile(r'^(\w+)\((.*)\)$')
 _RAW = re.compile(r'^(consumer|usage)\((0x[0-9a-fA-F]+)\)$')
 
@@ -78,7 +79,10 @@ def parse_binding(s):
         return s, ()
     m = _CALL.match(s)
     if m and m.group(1) in CALLS:
-        return m.group(1), tuple(a.strip() for a in m.group(2).split(','))
+        args = tuple(a.strip() for a in m.group(2).split(','))
+        if m.group(1) == 'qmk':
+            int(args[0], 0)  # validate
+        return m.group(1), args
     name_to_usage(s)  # validate
     return 'kp', (s,)
 
@@ -92,4 +96,6 @@ def normalize(s):
         return f'mt({usage_to_name(name_to_usage(args[0]))}, {usage_to_name(name_to_usage(args[1]))})'
     if kind == 'lt':
         return f'lt({args[0]}, {usage_to_name(name_to_usage(args[1]))})'
+    if kind == 'qmk':
+        return f'qmk(0x{int(args[0], 0):04x})'
     return s if not args else f'{kind}({", ".join(args)})'
