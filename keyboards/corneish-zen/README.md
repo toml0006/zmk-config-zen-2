@@ -15,8 +15,14 @@ corneish-zen-v2/
   config/
     west.yml                       ZMK main
     corneish_zen_mod.conf
-    corneish_zen_mod.keymap        4 layers (QWERTY / NUMBER / SYMBOL / FN)
+    corneish_zen_mod.keymap        4 layers (QWERTY / NUMBER / SYMBOL / FN) + spares
+  zen_keymap.json                  Raw live keymap dump from the device (2026-09-15)
 ```
+
+**Fall '26 preferred base Corne layout.** `corneish_zen_mod.keymap` is the
+reference 42-key layout to port to other Corne-style boards. It was pulled
+from the live board (Studio edits included) and verified key-for-key against
+`zen_keymap.json`. Git tag: `corne-base-fall-26`.
 
 The custom Corneish Zen boards live at
 [`../boards/lowprokb/corneish_zen_mod/`](../boards/lowprokb/corneish_zen_mod/)

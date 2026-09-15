@@ -1,5 +1,5 @@
 /*
- * Corne-ish Zen — preferred layout.
+ * Corne-ish Zen — Fall '26 preferred base Corne layout (tag: corne-base-fall-26).
  * Snapshot of the live on-device keymap (incl. ZMK Studio edits), pulled over
  * USB via the Studio RPC protocol on 2026-09-15. Raw dump: ../zen_keymap.json.
  */
