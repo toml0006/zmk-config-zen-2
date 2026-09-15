@@ -1,0 +1,54 @@
+name: corne-base-fall-26
+grid: corne42
+
+layers:
+  - id: qwerty
+    name: qwerty
+    rows:
+      - [tab              , q                , w                , e                , r                , t                ,   y                , u                , i                , o                , p                , bspc            ]
+      - [lctrl            , a                , s                , d                , f                , g                ,   h                , j                , k                , l                , semi             , sqt             ]
+      - [lshft            , z                , x                , c                , v                , b                ,   n                , m                , comma            , dot              , fslh             , esc             ]
+      - [                                                         lcmd             , mo(number)       , space            ,   ret              , mo(symbol)       , ralt            ]
+  - id: number
+    name: Number
+    rows:
+      - [trans            , n1               , n2               , n3               , n4               , n5               ,   n6               , n7               , n8               , n9               , n0               , bspc            ]
+      - [trans            , left             , up               , down             , right            , home             ,   end              , trans            , trans            , trans            , trans            , del             ]
+      - [trans            , trans            , trans            , trans            , trans            , pg_up            ,   pg_dn            , trans            , trans            , trans            , trans            , studio_unlock   ]
+      - [                                                         lcmd             , trans            , space            ,   ret              , mo(function)     , ralt            ]
+  - id: symbol
+    name: Symbol
+    rows:
+      - [tab              , excl             , at               , hash             , dllr             , prcnt            ,   caret            , amps             , star             , lpar             , rpar             , bspc            ]
+      - [lctrl            , shift+cmd+lbkt   , shift+cmd+rbkt   , shift+cmd+m      , trans            , globe            ,   minus            , equal            , lbkt             , rbkt             , bslh             , grave           ]
+      - [lshft            , cmd+grave        , shift+cmd+grave  , shift+cmd+a      , trans            , ctrl+shift+cmd+n4,   under            , plus             , lbrc             , rbrc             , pipe             , tilde           ]
+      - [                                                         lcmd             , mo(function)     , space            ,   ret              , trans            , ralt            ]
+  - id: function
+    name: Function
+    rows:
+      - [bt_sel(0)        , bt_sel(1)        , bt_sel(2)        , bt_sel(3)        , bt_sel(4)        , bt_sel(5)        ,   trans            , c_bri_dn         , consumer(0x71)   , c_bri_up         , trans            , bt_clr          ]
+      - [trans            , trans            , c_rw             , c_pp             , c_ff             , trans            ,   consumer(0x04)   , c_vol_dn         , c_mute           , c_vol_up         , trans            , trans           ]
+      - [trans            , trans            , trans            , trans            , trans            , trans            ,   consumer(0xd5)   , trans            , trans            , trans            , trans            , trans           ]
+      - [                                                         trans            , trans            , trans            ,   trans            , trans            , trans           ]
+  - id: spare2
+    name: SPARE2
+    rows:
+      - [trans            , trans            , trans            , trans            , trans            , trans            ,   trans            , trans            , trans            , trans            , trans            , trans           ]
+      - [trans            , trans            , trans            , trans            , trans            , trans            ,   trans            , trans            , trans            , trans            , trans            , trans           ]
+      - [trans            , trans            , trans            , trans            , trans            , trans            ,   trans            , trans            , trans            , trans            , trans            , trans           ]
+      - [                                                         trans            , trans            , trans            ,   trans            , trans            , trans           ]
+
+combos:
+- keys: [R14, R13]
+  binding: esc
+- keys: [L01, L02]
+  binding: tab
+- keys: [R02, R01]
+  binding: bspc
+- keys: [R12, R11]
+  binding: sqt
+
+timing: {tapping_term_ms: 200, combo_term_ms: 40}
+
+firmware_features:
+  tri_layer: [number, symbol, function]

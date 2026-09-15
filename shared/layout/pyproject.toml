@@ -1,0 +1,26 @@
+[project]
+name = "kbsync"
+version = "0.1.0"
+description = "One canonical keyboard layout, synced to every board"
+requires-python = ">=3.11"
+dependencies = ["pyyaml>=6"]
+
+[project.scripts]
+kbsync = "kbsync.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["kbsync"]
+
+[tool.setuptools.package-data]
+kbsync = ["data/*.json"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

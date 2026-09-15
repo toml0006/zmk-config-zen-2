@@ -1,7 +1,7 @@
 # Layout sync — one layout, every board
 
 **Date:** 2026-09-15
-**Status:** approved design, step 1 in progress
+**Status:** approved design, step 1 done
 **Seed layout:** `corne-base-fall-26` (Corneish Zen live keymap, 2026-09-15)
 
 ## Goal
@@ -22,7 +22,6 @@ hand-porting.
 | DASBOB | 36 | ZMK | Studio RPC (after reflash) | `keyboards/dasbob` |
 | Epomaker TH40 | ~40, row-staggered | VIA/QMK | VIA raw HID | `keyboards/th40` |
 
-(The 42-key count above totals three ZMK Cornes including the Zen.)
 
 ## Architecture
 
@@ -85,9 +84,11 @@ supports and a **degrade rule** for the rest (`bt_*`/`studio_unlock` →
 ```yaml
 name: corne-base-fall-26
 layers:
-  - id: base
+  - id: qwerty
     name: qwerty
-    keys: { L00: tab, L01: q, ... }
+    rows:            # corne42 grid, physical order: L00..L05 R05..R00, rows 1-2 alike, L30 L31 L32 R32 R31 R30
+      - [tab,   q, w, e, r, t,   y, u, i, o, p,    bspc]
+      - ...
 combos:
   - { keys: [R14, R13], binding: esc }    # J+K
   - { keys: [L01, L02], binding: tab }    # Q+W

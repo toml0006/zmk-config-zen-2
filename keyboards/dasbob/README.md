@@ -1,7 +1,6 @@
 # DASBOB
 
-Split keyboard. Vial firmware for RP2040 controllers.
-See `FLASHING.md` for controller options (nice!nano v2 wireless,
-Sea-Picro wired).
+Split keyboard (36 keys). `FLASHING.md` covers the controller options
+explored earlier (nice!nano v2 wireless, Sea-Picro wired).
 
-Firmware: **Vial (QMK)**.
+Firmware: **ZMK**. Layout comes from `shared/layout` (base + small-board overrides).

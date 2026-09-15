@@ -53,3 +53,7 @@ keyboards/totem/firmware/config/
 *.png
 *.gcode
 *.3mf
+
+# Python
+__pycache__/
+.pytest_cache/

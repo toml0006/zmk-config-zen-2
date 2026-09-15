@@ -15,7 +15,7 @@ hardware assets live in `shared/`. ZMK build infrastructure (`boards/`,
 │   │   ├── prospector/               Dongle = central, both halves = peripherals
 │   │   ├── standalone/               Left = central, right = peripheral (no dongle)
 │   │   └── scanner/                  Standalone + passive Prospector observer
-│   ├── dasbob/                       DASBOB split                                      [Vial/QMK]
+│   ├── dasbob/                       DASBOB split                                      [ZMK]
 │   ├── totem/                        Totem split — firmware/ + case/                   [ZMK]
 │   ├── th40/                         40% Corne-matched layout        (planned)         [VIA/QMK]
 │   ├── iris/                         Iris split                      (planned)
@@ -29,6 +29,7 @@ hardware assets live in `shared/`. ZMK build infrastructure (`boards/`,
 ├── zephyr/                           ZMK module marker (west)
 │
 ├── shared/                           Not tied to one board
+│   ├── layout/                       Canonical layout + kbsync generator (all boards)
 │   ├── keycaps/                      Parametric keycap generator (Fusion)
 │   ├── switchbox/                    Parametric switch storage box
 │   ├── prospector/case/             Prospector dongle case STLs
