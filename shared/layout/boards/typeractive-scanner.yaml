@@ -1,0 +1,11 @@
+board: typeractive-scanner
+firmware: zmk
+keymap: keyboards/typeractive/scanner/config/corne.keymap
+positions: corne42
+zmk:
+  physical_layout: foostan_corne_6col_layout
+  reserved_layers: 1   # lets Studio add one more layer
+overrides:
+  number:
+    R20: none   # studio_unlock — Studio is off on this build (left half is central)
+local: {}

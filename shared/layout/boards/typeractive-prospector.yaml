@@ -1,0 +1,9 @@
+board: typeractive-prospector
+firmware: zmk
+keymap: keyboards/typeractive/prospector/config/corne.keymap
+positions: corne42
+zmk:
+  physical_layout: foostan_corne_6col_layout
+  reserved_layers: 1   # lets Studio add one more layer
+overrides: {}
+local: {}
